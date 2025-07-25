@@ -1,6 +1,7 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 #include <iostream>
+#include <ctime>
 
 #include "particle_grid.h"
 
@@ -17,6 +18,7 @@ constexpr int kScreenHeight { kGridHeight * kCellScale };
 int main(int argc, char** argv)
 {
     SDL_Init(SDL_INIT_VIDEO);
+    std::srand(std::time(0));
     
     SDL_Window* pWindow = SDL_CreateWindow("SandToy", kScreenWidth, kScreenHeight, 0);
     SDL_Renderer* pRenderer = SDL_CreateRenderer(pWindow, nullptr);
@@ -100,11 +102,7 @@ int main(int argc, char** argv)
         // Edit Sandbox //
         if (brush.down)
         {
-            ParticleGrid::Cell* cell = grid.getCell(brush.x, brush.y);
-            if (cell)
-            {
-                cell->setParticleType(ParticleType::Sand);
-            }
+            grid.setCellParticleType(brush.x, brush.y, ParticleType::Sand);
         }
         //////////////////
         // Draw //

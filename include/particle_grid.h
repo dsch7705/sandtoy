@@ -22,14 +22,13 @@ struct ParticleGrid
     {
         Cell(int _x, int _y, ParticleType type = ParticleType::Air);
 
-        void setParticleType(ParticleType type);
-        ParticleType particleType() const;
-
         const int x, y;
         char colorVariation;
         
     private:
         ParticleType m_particleType;
+        
+        friend class ParticleGrid;
 
     }; 
     
@@ -37,6 +36,8 @@ struct ParticleGrid
     int height() const;
 
     Cell* getCell(int x, int y);
+    void setCellParticleType(int x, int y, ParticleType type);
+    void setCellParticleType(Cell* cell, ParticleType type);
 
     bool bDrawGrid { false };
     void draw();
@@ -45,6 +46,8 @@ struct ParticleGrid
 
 private:
     std::vector<std::vector<Cell>> m_particles;
+    std::vector<Cell*> m_redrawCells;
+
     SDL_Texture* m_streamingTexture;
     SDL_Renderer* m_renderer;
     SDL_FRect m_rendererRect;
