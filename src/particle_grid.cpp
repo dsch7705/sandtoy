@@ -99,16 +99,32 @@ void ParticleGrid::draw()
             cellColor = 0x00000000;
             break;
         
-        case ParticleType::Sand:
+        case ParticleType::Stone:
         {
-            Uint32 choices[] = { 0xF6D7B0FF, 0xF2D2A9FF, 0xECCCA2FF, 0xE7C496FF, 0xE1BF92FF };
+            Uint32 choices[] = { 0x4A4A4AFF, 0x505050FF, 0x464646FF, 0x4C4C4CFF, 0x444444FF };
             cellColor = choices[cell->colorVariation];
             break;
         }
 
         case ParticleType::Gravel:
         {
-            Uint32 choices[] = { 0x3A3128FF, 0x615441FF, 0x89785CFF, 0x333333FF, 0x272727FF };
+            //Uint32 choices[] = { 0x3A3128FF, 0x615441FF, 0x89785CFF, 0x333333FF, 0x272727FF };
+            Uint32 choices[] = { 0x6A6A6AFF, 0x707070FF, 0x666666FF, 0x5E5E5EFF, 0x747474FF };
+            cellColor = choices[cell->colorVariation];
+            break;
+        }
+
+        case ParticleType::Dirt:
+        {
+            Uint32 choices[] = { 0x5A3A1EFF, 0x684425FF, 0x4E3018FF, 0x6F482BFF, 0x59391FFF };
+            cellColor = choices[cell->colorVariation];
+            break;
+        }
+
+        case ParticleType::Sand:
+        {
+            //Uint32 choices[] = { 0xF6D7B0FF, 0xF2D2A9FF, 0xECCCA2FF, 0xE7C496FF, 0xE1BF92FF };
+            Uint32 choices[] = { 0xE2C290FF, 0xD6B77EFF, 0xF0D8A8FF, 0xCCAA72FF, 0xB8935EFF };
             cellColor = choices[cell->colorVariation];
             break;
         }
@@ -162,7 +178,9 @@ void ParticleGrid::updateCell(int x, int y)
     Cell* cellNext = nullptr;
     switch (cell->m_particleType)
     {
+    case ParticleType::Stone:
     case ParticleType::Gravel:
+    case ParticleType::Dirt:
     case ParticleType::Sand:
         // Find suitable next cell
         if ((cellNext = getCell(x, y + 1)) != nullptr && cellNext->m_particleType != ParticleType::Air)

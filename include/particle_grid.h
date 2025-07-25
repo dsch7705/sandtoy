@@ -11,7 +11,9 @@ struct SDL_Texture;
 #define PARTICLE_TYPE_LIST \
     X(Air)                 \
     X(Sand)                \
-    X(Gravel)
+    X(Gravel)              \
+    X(Dirt)                \
+    X(Stone)
 
 enum class ParticleType
 {
