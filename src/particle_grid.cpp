@@ -2,18 +2,55 @@
 
 #include <SDL3/SDL.h>
 #include <cassert>
+#include <algorithm>
 #include <iostream>
 
 
-ParticleGrid::ParticleGrid(const int w, const int h)
+ParticleGrid::Cell::Cell(int _x, int _y, ParticleType type) 
+    : x(_x), y(_y)
+    , m_particleType(type)
+{
+    colorVariation = std::rand() % 5;
+}
+void ParticleGrid::Cell::setParticleType(ParticleType type)
+{
+    if (m_particleType != type)
+    {
+        m_particleType = type;
+    }
+}
+ParticleType ParticleGrid::Cell::particleType() const
+{
+    return m_particleType;
+}
+
+ParticleGrid::ParticleGrid(const int w, const int h, SDL_Renderer* renderer)
 {
     assert(w > 0 && "w must be greater than 0");
     assert(h > 0 && "h must be greater than 0");
 
     for (int y = 0; y < h; ++y)
     {
-        m_particles.emplace_back(w);
+        std::vector<Cell> row;
+        for (int x = 0; x < w; ++x)
+        {
+            row.emplace_back(x, y);
+        }
+
+        m_particles.push_back(std::move(row));
     }
+
+    m_renderer = renderer;
+    int rW, rH;
+    SDL_GetCurrentRenderOutputSize(m_renderer, &rW, &rH);
+    m_rendererRect = { .x = 0, .y = 0, .w = (float)rW, .h = (float)rH };
+
+    m_streamingTexture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, w, h);
+    SDL_SetTextureScaleMode(m_streamingTexture, SDL_SCALEMODE_NEAREST);
+}
+ParticleGrid::~ParticleGrid()
+{
+    SDL_DestroyTexture(m_streamingTexture);
 }
 
 int ParticleGrid::width() const
@@ -24,7 +61,8 @@ int ParticleGrid::height() const
 {
     return m_particles.size();
 }
-ParticleGrid::Cell *ParticleGrid::getCell(int x, int y)
+
+ParticleGrid::Cell* ParticleGrid::getCell(int x, int y)
 {
     if (y >= m_particles.size() || x >= m_particles[0].size())
     {
@@ -34,96 +72,112 @@ ParticleGrid::Cell *ParticleGrid::getCell(int x, int y)
     return &m_particles[y][x];
 }
 
-void ParticleGrid::draw(SDL_Renderer* pRenderer)
+void ParticleGrid::draw()
 {
-    int targetWidth, targetHeight;
-    SDL_GetCurrentRenderOutputSize(pRenderer, &targetWidth, &targetHeight);
-
-    float cellScaleX = targetWidth / (float)width();
-    float cellScaleY = targetHeight / (float)height();
+    void* pixels;
+    int pitch;
+    SDL_LockTexture(m_streamingTexture, nullptr, &pixels, &pitch);
+    if (pitch / sizeof(Uint32) != width())
+    {
+        std::cout << "Streaming texture dimensions don't match those of the particle grid" << std::endl;
+        return;
+    }
+    Uint32* pixelBuffer = static_cast<Uint32*>(pixels);
 
     for (int y = 0; y < height(); ++y)
     {
         for (int x = 0; x < width(); ++x)
         {
-            SDL_FRect cellRect { .x = x * cellScaleX, .y = y * cellScaleY,
-                                 .w = cellScaleX, .h = cellScaleY };
-            SDL_Color cellColor;
-            switch (getCell(x, y)->particleType)
+            Cell *cell = getCell(x, y);
+
+            Uint32 cellColor;
+            switch (cell->particleType())
             {
             default:
             case ParticleType::Air:
-                cellColor = { .r = 0, .g = 0, .b = 0, .a = 0 };
+                cellColor = 0x00000000;
                 break;
             
             case ParticleType::Sand:
-                cellColor = { .r = 246, .g = 215, .b = 176, .a = 255 };
+            {
+                Uint32 choices[] = { 0xF6D7B0FF, 0xF2D2A9FF, 0xECCCA2FF, 0xE7C496FF, 0xE1BF92FF };
+                cellColor = choices[cell->colorVariation];
                 break;
-
+            }
             }
 
-            SDL_SetRenderDrawColor(pRenderer, cellColor.r, cellColor.g, cellColor.b, cellColor.a);
-            SDL_RenderFillRect(pRenderer, &cellRect);
+            pixelBuffer[y * (pitch / sizeof(Uint32)) + x] = cellColor;
         }
     }
 
+    SDL_UnlockTexture(m_streamingTexture);
+    SDL_RenderTexture(m_renderer, m_streamingTexture, nullptr, &m_rendererRect);
+
     if (bDrawGrid)
     {
-        SDL_SetRenderDrawColor(pRenderer, 255, 255, 255, 128);
-        drawGrid(pRenderer, cellScaleX, cellScaleY);
+        SDL_SetRenderDrawColor(m_renderer, 255, 255, 255, 128);
+        drawGrid();
     }
 }
 void ParticleGrid::update()
 {
     update_b2t();
+    //update_t2b();
 }
 
-void ParticleGrid::drawGrid(SDL_Renderer *pRenderer, int scaleX, int scaleY)
+void ParticleGrid::drawGrid()
 {
+    int scaleX, scaleY;
+    SDL_GetCurrentRenderOutputSize(m_renderer, &scaleX, &scaleY);
+    scaleX /= width();
+    scaleY /= height();
+
     for (int x = 0; x <= width(); ++x)
     {
-        SDL_RenderLine(pRenderer, x * scaleX, 0, x * scaleX, height() * scaleY);
+        SDL_RenderLine(m_renderer, x * scaleX, 0, x * scaleX, height() * scaleY);
     }
     for (int y = 0; y <= height(); ++y)
     {
-        SDL_RenderLine(pRenderer, 0, y * scaleY, width() * scaleX, y * scaleY);
+        SDL_RenderLine(m_renderer, 0, y * scaleY, width() * scaleX, y * scaleY);
     }
 }
 
 void ParticleGrid::updateCell(int x, int y)
 {
-    Cell *cell = getCell(x, y);
+    Cell* cell = getCell(x, y);
     if (cell == nullptr)
     {
         return;
     }
 
-    Cell *cellNext = nullptr;
-    switch (cell->particleType)
+    Cell* cellNext = nullptr;
+    switch (cell->particleType())
     {
     case ParticleType::Sand:
         // Find suitable next cell
-        if ((cellNext = getCell(x, y + 1)) == nullptr || cellNext->particleType == ParticleType::Sand)
+        if ((cellNext = getCell(x, y + 1)) != nullptr && cellNext->particleType() != ParticleType::Air)
         {
             int dir = std::rand() % 2 ? 1 : -1;
-            if ((cellNext = getCell(x + dir, y + 1)) == nullptr || cellNext->particleType == ParticleType::Sand)
+            if ((cellNext = getCell(x + dir, y + 1)) != nullptr && cellNext->particleType() != ParticleType::Air)
             {
-                if ((cellNext = getCell(x - dir, y + 1)) == nullptr || cellNext->particleType == ParticleType::Sand)
+                if ((cellNext = getCell(x - dir, y + 1)) != nullptr && cellNext->particleType() != ParticleType::Air)
                 {
                     cellNext = nullptr;
                 }
             }
         }
-    {
-        if (cellNext == nullptr)
+    
+        if (cellNext != nullptr)
         {
-            break;
+            // Update cell
+            cell->setParticleType(ParticleType::Air);
+            cellNext->setParticleType(ParticleType::Sand);
         }
-
-        cell->particleType = ParticleType::Air;
-        cellNext->particleType = ParticleType::Sand;
         break;
-    }
+    
+    case ParticleType::Air:
+        //m_activeParticles.remove(cell);
+        break;
 
     default:
         break;
@@ -136,17 +190,25 @@ void ParticleGrid::update_b2t()
     {
         for (int x = width(); x >= 0; --x)
         {
-            updateCell(x, y);
+            Cell* cell = getCell(x, y);
+            if (cell != nullptr)
+            {
+                updateCell(cell->x, cell->y);
+            }
         }
     }
 }
 void ParticleGrid::update_t2b()
 {
-    for (int y = 0; y < height(); --y)
+    for (int y = 0; y < height(); ++y)
     {
         for (int x = 0; x < width(); ++x)
         {
-            updateCell(x, y);
+            Cell* cell = getCell(x, y);
+            if (cell != nullptr)
+            {
+                updateCell(cell->x, cell->y);
+            }
         }
     }
 }

@@ -1,9 +1,12 @@
 #pragma once
 
+#include <SDL3/SDL_rect.h>
 #include <vector>
+
 
 // Forward Declarations //
 struct SDL_Renderer;
+struct SDL_Texture;
 //////////////////////////
 enum class ParticleType
 {
@@ -12,29 +15,41 @@ enum class ParticleType
 };
 struct ParticleGrid
 {
-    ParticleGrid(int w, int h);
+    ParticleGrid(int w, int h, SDL_Renderer* renderer);
+    ~ParticleGrid();
 
     struct Cell
     {
-        Cell() : particleType(ParticleType::Air) {}
-        Cell(ParticleType type) : particleType(type) {}
+        Cell(int _x, int _y, ParticleType type = ParticleType::Air);
 
-        ParticleType particleType;
+        void setParticleType(ParticleType type);
+        ParticleType particleType() const;
+
+        const int x, y;
+        char colorVariation;
+        
+    private:
+        ParticleType m_particleType;
+
     }; 
     
     int width() const;
     int height() const;
-    Cell *getCell(int x, int y);
+
+    Cell* getCell(int x, int y);
 
     bool bDrawGrid { false };
-    void draw(SDL_Renderer *pRenderer);
+    void draw();
 
     void update();
 
 private:
     std::vector<std::vector<Cell>> m_particles;
+    SDL_Texture* m_streamingTexture;
+    SDL_Renderer* m_renderer;
+    SDL_FRect m_rendererRect;
 
-    void drawGrid(SDL_Renderer *pRenderer, int scaleX, int scaleY);
+    void drawGrid();
 
     void updateCell(int x, int y);
     void update_b2t();

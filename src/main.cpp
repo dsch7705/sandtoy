@@ -14,25 +14,30 @@ constexpr int kScreenWidth { kGridWidth * kCellScale };
 constexpr int kScreenHeight { kGridHeight * kCellScale };
 ///////////////
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
     SDL_Init(SDL_INIT_VIDEO);
     
-    SDL_Window *pWindow = SDL_CreateWindow("SandToy", kScreenWidth, kScreenHeight, 0);
-    SDL_Renderer *pRenderer = SDL_CreateRenderer(pWindow, nullptr);
+    SDL_Window* pWindow = SDL_CreateWindow("SandToy", kScreenWidth, kScreenHeight, 0);
+    SDL_Renderer* pRenderer = SDL_CreateRenderer(pWindow, nullptr);
     SDL_SetRenderDrawBlendMode(pRenderer, SDL_BLENDMODE_BLEND);
 
-    ParticleGrid grid(kGridWidth, kGridHeight);
+    ParticleGrid grid(kGridWidth, kGridHeight, pRenderer);
 
     struct Brush
     {
         int x, y;
-        bool down;
+        bool down { false };
     } brush;
+
+    Uint64 startTime, endTime;
+    float elapsed, fps;
 
     bool bQuit { false };
     while (!bQuit)
     {
+        startTime = SDL_GetPerformanceCounter();
+
         // Handle Events //
         SDL_Event e;
         while (SDL_PollEvent(&e))
@@ -95,10 +100,10 @@ int main(int argc, char **argv)
         // Edit Sandbox //
         if (brush.down)
         {
-            ParticleGrid::Cell *cell = grid.getCell(brush.x, brush.y);
+            ParticleGrid::Cell* cell = grid.getCell(brush.x, brush.y);
             if (cell)
             {
-                cell->particleType = ParticleType::Sand;
+                cell->setParticleType(ParticleType::Sand);
             }
         }
         //////////////////
@@ -107,10 +112,16 @@ int main(int argc, char **argv)
         SDL_RenderClear(pRenderer);
 
         grid.update();
-        grid.draw(pRenderer);
+        grid.draw();
 
         SDL_RenderPresent(pRenderer);
         //////////
+
+        endTime = SDL_GetPerformanceCounter();
+        elapsed = (float)(endTime - startTime) / SDL_GetPerformanceFrequency();
+        fps = 1.f / elapsed;
+
+        std::cout << "FPS: " << fps << std::endl;
     }
     
     SDL_DestroyRenderer(pRenderer);
