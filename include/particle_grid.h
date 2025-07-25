@@ -8,11 +8,25 @@
 struct SDL_Renderer;
 struct SDL_Texture;
 //////////////////////////
+#define PARTICLE_TYPE_LIST \
+    X(Air)                 \
+    X(Sand)                \
+    X(Gravel)
+
 enum class ParticleType
 {
-    Air,
-    Sand,
+#define X(NAME) NAME,
+    PARTICLE_TYPE_LIST
+#undef X
+    COUNT
 };
+static const char* ParticleTypeNames[] = 
+{
+#define X(NAME) #NAME,
+    PARTICLE_TYPE_LIST
+#undef X
+};
+
 struct ParticleGrid
 {
     ParticleGrid(int w, int h, SDL_Renderer* renderer);

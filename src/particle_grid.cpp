@@ -92,6 +92,9 @@ void ParticleGrid::draw()
         switch (cell->m_particleType)
         {
         default:
+            cellColor = 0xFF00FFFF;
+            break;
+
         case ParticleType::Air:
             cellColor = 0x00000000;
             break;
@@ -102,6 +105,14 @@ void ParticleGrid::draw()
             cellColor = choices[cell->colorVariation];
             break;
         }
+
+        case ParticleType::Gravel:
+        {
+            Uint32 choices[] = { 0x3A3128FF, 0x615441FF, 0x89785CFF, 0x333333FF, 0x272727FF };
+            cellColor = choices[cell->colorVariation];
+            break;
+        }
+
         }
 
         pixelBuffer[cell->y * (pitch / sizeof(Uint32)) + cell->x] = cellColor;
@@ -151,6 +162,7 @@ void ParticleGrid::updateCell(int x, int y)
     Cell* cellNext = nullptr;
     switch (cell->m_particleType)
     {
+    case ParticleType::Gravel:
     case ParticleType::Sand:
         // Find suitable next cell
         if ((cellNext = getCell(x, y + 1)) != nullptr && cellNext->m_particleType != ParticleType::Air)
@@ -167,8 +179,8 @@ void ParticleGrid::updateCell(int x, int y)
     
         if (cellNext != nullptr)
         {
+            setCellParticleType(cellNext, cell->m_particleType);
             setCellParticleType(cell, ParticleType::Air);
-            setCellParticleType(cellNext, ParticleType::Sand);
         }
         break;
     
