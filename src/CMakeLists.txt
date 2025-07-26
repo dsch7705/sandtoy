@@ -1,5 +1,6 @@
 set(SRC main.cpp
-        particle_grid.cpp)
+        particle_grid.cpp
+        brush.cpp)
 
 set(IMGUI_DIR ${CMAKE_SOURCE_DIR}/lib/imgui)
 file(GLOB IMGUI_SRC ${IMGUI_DIR}/*.cpp

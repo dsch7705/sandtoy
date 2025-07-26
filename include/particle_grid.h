@@ -3,32 +3,13 @@
 #include <SDL3/SDL_rect.h>
 #include <vector>
 
+#include "particles.h"
+
 
 // Forward Declarations //
 struct SDL_Renderer;
 struct SDL_Texture;
 //////////////////////////
-#define PARTICLE_TYPE_LIST \
-    X(Air)                 \
-    X(Sand)                \
-    X(Gravel)              \
-    X(Dirt)                \
-    X(Stone)
-
-enum class ParticleType
-{
-#define X(NAME) NAME,
-    PARTICLE_TYPE_LIST
-#undef X
-    COUNT
-};
-static const char* ParticleTypeNames[] = 
-{
-#define X(NAME) #NAME,
-    PARTICLE_TYPE_LIST
-#undef X
-};
-
 struct ParticleGrid
 {
     ParticleGrid(int w, int h, SDL_Renderer* renderer);
@@ -59,6 +40,7 @@ struct ParticleGrid
     void draw();
 
     void update();
+    void clear();
 
 private:
     std::vector<std::vector<Cell>> m_particles;

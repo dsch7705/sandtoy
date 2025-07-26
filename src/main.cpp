@@ -10,9 +10,9 @@
 
 
 // Constants //
-constexpr int kCellScale { 8 };
-constexpr int kGridWidth { 128 };
-constexpr int kGridHeight { 64 };
+constexpr int kCellScale { 6 };
+constexpr int kGridWidth { 256 };
+constexpr int kGridHeight { 128 };
 
 constexpr int kScreenWidth { kGridWidth * kCellScale };
 constexpr int kScreenHeight { kGridHeight * kCellScale };
@@ -70,6 +70,10 @@ int main(int argc, char** argv)
                     grid.bDrawGrid = !grid.bDrawGrid;
                     break;
 
+                case SDLK_R:
+                    grid.clear();
+                    break;
+
                 default:
                     break;
 
@@ -124,7 +128,6 @@ int main(int argc, char** argv)
         //ImGui::SetNextWindowSize(ImVec2(100, 200), ImGuiCond_Once);
         ImGui::Begin("Sandbox");
 
-        int gui_selectedParticleType = 0;
         if (ImGui::BeginCombo("Particle Type", ParticleTypeNames[static_cast<int>(brush.particleType)]))
         {
             for (int i = 0; i < static_cast<int>(ParticleType::COUNT); ++i)

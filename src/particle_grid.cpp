@@ -129,6 +129,27 @@ void ParticleGrid::draw()
             break;
         }
 
+        case ParticleType::Rainbow:
+        {
+            Uint32 choices[] = { 0xEF476FFF, 0xFFA600FF, 0x06D6A0FF, 0x118AB2FF, 0x9B5DE5FF };
+            cellColor = choices[cell->colorVariation];
+            break;
+        }
+
+        case ParticleType::Pink:
+        {
+            Uint32 choices[] = { 0xFFC0CBFF, 0xFFB6C1FF, 0xFF69B4FF, 0xFF1493FF, 0xDB7093FF };
+            cellColor = choices[cell->colorVariation];
+            break;
+        }
+
+        case ParticleType::Blue:
+        {
+            Uint32 choices[] = { 0x3A75C4FF, 0x4682B4FF, 0x5B9BD5FF, 0x4F83CCFF, 0x357EC7FF };
+            cellColor = choices[cell->colorVariation];
+            break;
+        }   
+
         }
 
         pixelBuffer[cell->y * (pitch / sizeof(Uint32)) + cell->x] = cellColor;
@@ -148,6 +169,16 @@ void ParticleGrid::update()
 {
     update_b2t();
     //update_t2b();
+}
+void ParticleGrid::clear()
+{
+    for (std::vector<Cell>& row : m_particles)
+    {
+        for (Cell& cell : row)
+        {
+            setCellParticleType(&cell, ParticleType::Air);
+        }
+    }
 }
 
 void ParticleGrid::drawGrid()
@@ -178,6 +209,10 @@ void ParticleGrid::updateCell(int x, int y)
     Cell* cellNext = nullptr;
     switch (cell->m_particleType)
     {
+    case ParticleType::Rainbow:
+    case ParticleType::Pink:
+    case ParticleType::Blue:
+
     case ParticleType::Stone:
     case ParticleType::Gravel:
     case ParticleType::Dirt:
