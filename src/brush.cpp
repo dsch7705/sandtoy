@@ -22,6 +22,7 @@ void Brush::handleEvent(SDL_Event* event, bool isUiFocused)
     switch (event->type)
     {
     case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        SDL_CaptureMouse(true);
         switch (event->button.button)
         {
         case 1:
@@ -51,6 +52,7 @@ void Brush::handleEvent(SDL_Event* event, bool isUiFocused)
         break;
 
     case SDL_EVENT_MOUSE_BUTTON_UP:
+        SDL_CaptureMouse(false);
         switch (event->button.button)
         {
         case 1:

@@ -3,7 +3,6 @@
 
 #include <SDL3/SDL.h>
 #include <cassert>
-#include <algorithm>
 #include <iostream>
 
 
@@ -78,7 +77,7 @@ ParticleGrid::ParticleGrid(const int w, const int h, SDL_Renderer* renderer)
     m_renderer = renderer;
     int rW, rH;
     SDL_GetCurrentRenderOutputSize(m_renderer, &rW, &rH);
-    m_rendererRect = { .x = 0, .y = 0, .w = (float)rW, .h = (float)rH };
+    m_rendererRect = { .x = 0, .y = 0, .w = static_cast<float>(rW), .h = static_cast<float>(rH) };
 
     m_streamingTexture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, w, h);
     SDL_SetTextureScaleMode(m_streamingTexture, SDL_SCALEMODE_NEAREST);

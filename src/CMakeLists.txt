@@ -10,19 +10,27 @@ file(GLOB IMGUI_SRC ${IMGUI_DIR}/*.cpp
                     ${IMGUI_DIR}/backends/imgui_impl_sdl3.cpp
                     ${IMGUI_DIR}/backends/imgui_impl_sdlrenderer3.cpp)
 
-add_executable(sandtoy)
+set(EXE_NAME sandtoy)
 
-target_compile_definitions(sandtoy PRIVATE IMGUI_FONTS_DIR="${IMGUI_FONTS_DIR}")
-if (USE_ASAN)
-        target_compile_options(sandtoy PRIVATE -fsanitize=address)
-        target_link_options(sandtoy PRIVATE -fsanitize=address)
+add_executable(${EXE_NAME})
+
+
+target_compile_definitions(${EXE_NAME} PRIVATE IMGUI_FONTS_DIR="${IMGUI_FONTS_DIR}")
+if (EMSCRIPTEN)
+        target_compile_definitions(${EXE_NAME} PRIVATE EMSCRIPTEN -Wno-macro-redefined)
+        target_link_options(${EXE_NAME} PRIVATE "-sEXPORTED_FUNCTIONS=['_malloc', '_free', '_main']")
 endif()
 
-target_include_directories(sandtoy PRIVATE ${CMAKE_SOURCE_DIR}/include
+if (USE_ASAN)
+        target_compile_options(${EXE_NAME} PRIVATE -fsanitize=address)
+        target_link_options(${EXE_NAME} PRIVATE -fsanitize=address)
+endif()
+
+target_include_directories(${EXE_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/include
                                            ${IMGUI_DIR}
                                            ${IMGUI_DIR}/backends)
 
-target_sources(sandtoy PRIVATE ${SRC}
+target_sources(${EXE_NAME} PRIVATE ${SRC}
                                ${IMGUI_SRC})
 
-target_link_libraries(sandtoy PRIVATE SDL3::SDL3)
+target_link_libraries(${EXE_NAME} PRIVATE SDL3-static)
