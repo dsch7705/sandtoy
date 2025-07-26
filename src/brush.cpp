@@ -126,6 +126,19 @@ float Brush::radius() const
     return m_radius;
 }
 
+void Brush::toggleHighlight()
+{
+    m_canvas->m_showBrushHighlight = !m_canvas->m_showBrushHighlight;
+    for (Cell* cell : m_selectedCells)
+    {
+        cell->markForRedraw();
+    }
+}
+bool Brush::highlight() const
+{
+    return m_canvas->m_showBrushHighlight;
+}
+
 void Brush::updateSelectedCells()
 {
     for (Cell* cell : m_selectedCells)

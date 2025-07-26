@@ -71,11 +71,11 @@ int main(int argc, char** argv)
                 switch (e.key.key)
                 {
                 case SDLK_G:
-                    grid.bDrawGrid = !grid.bDrawGrid;
+                    grid.toggleGridLines();
                     break;
 
                 case SDLK_H:
-                    grid.bHighlightSelected = !grid.bHighlightSelected;
+                    brush.toggleHighlight();
                     break;
 
                 case SDLK_R:
@@ -120,11 +120,25 @@ int main(int argc, char** argv)
             }
             ImGui::EndCombo();
         }
-        float brushRadius = brush.radius();
-        if (ImGui::SliderFloat("Brush radius", &brushRadius, Brush::kMinRadius, Brush::kMaxRadius, "%.1f"))
+
+        float guiBrushRadius = brush.radius();
+        if (ImGui::SliderFloat("Brush radius", &guiBrushRadius, Brush::kMinRadius, Brush::kMaxRadius, "%.1f"))
         {
-            brush.setRadius(brushRadius);
+            brush.setRadius(guiBrushRadius);
         }
+
+        bool guiShowGridLines = grid.gridLines();
+        if (ImGui::Checkbox("Show grid lines", &guiShowGridLines))
+        {
+            grid.toggleGridLines();
+        }
+
+        bool guiShowBrushHighlight = brush.highlight();
+        if (ImGui::Checkbox("Show brush highlight", &guiShowBrushHighlight))
+        {
+            brush.toggleHighlight();
+        }
+
         ImGui::Text("FPS: %f", fps);
 
         ImGui::PopItemWidth();

@@ -107,6 +107,15 @@ Cell* ParticleGrid::getCell(int x, int y)
     return &m_particles[y][x];
 }
 
+void ParticleGrid::toggleGridLines()
+{
+    m_showGridLines = !m_showGridLines;
+}
+bool ParticleGrid::gridLines() const
+{
+    return m_showGridLines;
+}
+
 void ParticleGrid::draw()
 {
     void* pixels;
@@ -186,7 +195,7 @@ void ParticleGrid::draw()
         }
 
         // Add brush overlay
-        if (bHighlightSelected && cell->selected())
+        if (m_showBrushHighlight && cell->selected())
         {
             cellColor = Util::blendRGBA(cellColor, 0xFFFFFF22);
         }
@@ -199,7 +208,7 @@ void ParticleGrid::draw()
     SDL_UnlockTexture(m_streamingTexture);
     SDL_RenderTexture(m_renderer, m_streamingTexture, nullptr, &m_rendererRect);
 
-    if (bDrawGrid)
+    if (m_showGridLines)
     {
         SDL_SetRenderDrawColor(m_renderer, 255, 255, 255, 128);
         drawGrid();

@@ -26,14 +26,14 @@ struct Cell
     void setSelected(bool selected);
     bool selected() const;
 
+    void markForRedraw();
+
 private:
     ParticleGrid* m_particleGrid;
     ParticleType m_particleType;
 
     bool m_needsRedraw;
     bool m_isSelected;
-
-    void markForRedraw();
     
     friend class ParticleGrid;
 
@@ -48,10 +48,10 @@ struct ParticleGrid
 
     Cell* getCell(int x, int y);
 
-    bool bDrawGrid { false };
-    bool bHighlightSelected { true };
+    void toggleGridLines();
+    bool gridLines() const;
+    
     void draw();
-
     void update();
     void clear();
 
@@ -62,6 +62,9 @@ private:
     SDL_Texture* m_streamingTexture;
     SDL_Renderer* m_renderer;
     SDL_FRect m_rendererRect;
+
+    bool m_showGridLines { false };
+    bool m_showBrushHighlight { true };
 
     void drawGrid();
 

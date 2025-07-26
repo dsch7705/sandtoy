@@ -19,6 +19,9 @@ public:
     void setRadius(float radius);
     float radius() const;
 
+    void toggleHighlight();
+    bool highlight() const;
+
     static constexpr float kMinRadius { 0.5f };
     static constexpr float kMaxRadius { 15.f };
     // Scales the rate at which the scroll wheel resizes the brush
