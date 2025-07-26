@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>SandToy</title>
+        <style>
+            html, body { 
+                margin: 0; 
+                padding: 0; 
+                overflow: hidden; 
+
+                height: 100%;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+            canvas { display: block; pointer-events: painted; }
+        </style>
+    </head>
+    <body>
+        <canvas id="canvas" oncontextmenu="event.preventDefault()"></canvas>
+        <script>
+            const canvas = document.querySelector('canvas');
+            canvas.ondragstart = e => e.preventDefault();
+            canvas.style['-webkit-user-drag'] = 'none';
+            canvas.style['user-select'] = 'none';
+        </script>
+        {{{ SCRIPT }}}
+    </body>
+</html>

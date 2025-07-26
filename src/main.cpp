@@ -2,24 +2,9 @@
 #include <SDL3/SDL_main.h>
 #include <iostream>
 #include <ctime>
+
 #ifdef EMSCRIPTEN
 #include <emscripten.h>
-
-EM_JS(void, disable_canvas_drag, (), {
-  const canvas = Module['canvas'];
-  if (!canvas) return;
-
-  canvas.style.userSelect = 'none';
-  canvas.style.webkitUserSelect = 'none';
-  canvas.style.mozUserSelect = 'none';
-  canvas.style.msUserSelect = 'none';
-  canvas.style.webkitUserDrag = 'none';
-
-  canvas.addEventListener('dragstart', e => e.preventDefault());
-  canvas.addEventListener('mousedown', e => e.preventDefault());
-  canvas.addEventListener('selectstart', e => e.preventDefault());
-  canvas.addEventListener('contextmenu', e => e.preventDefault());
-});
 #endif
 
 #include "particle_grid.h"
@@ -43,7 +28,7 @@ static SDL_Window* window;
 static SDL_Renderer* renderer;
 
 static Uint64 startTime, endTime;
-static float elapsed, fps;
+static float deltaTime, fps;
 
 static ParticleGrid* grid;
 static Brush* brush;
@@ -154,8 +139,11 @@ static void mainloop()
     grid->draw();
 
     endTime = SDL_GetPerformanceCounter();
-    elapsed = (float)(endTime - startTime) / SDL_GetPerformanceFrequency();
-    fps = 1.f / elapsed;
+    deltaTime = static_cast<float>(endTime - startTime) / SDL_GetPerformanceFrequency();
+#ifdef EMSCRIPTEN
+    deltaTime = std::max(deltaTime, 0.001f);
+#endif
+    fps = 1.f / deltaTime;
 
     ImGui::Render();
     ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
@@ -188,7 +176,6 @@ int main(int argc, char** argv)
     brush->setCanvas(grid);
 
 #ifdef EMSCRIPTEN
-    disable_canvas_drag();
     emscripten_set_main_loop(mainloop, 0, 1);
 #else
     while (!quit) { mainloop(); }
