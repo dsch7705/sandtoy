@@ -9,34 +9,47 @@
 // Forward Declarations //
 struct SDL_Renderer;
 struct SDL_Texture;
+
+struct ParticleGrid;
+class Brush;
 //////////////////////////
+struct Cell
+{
+    Cell(ParticleGrid* particleGrid, int _x, int _y, ParticleType type = ParticleType::Vacuum);
+
+    const int x, y;
+    char colorVariation;
+    
+    void setParticleType(ParticleType type);
+    ParticleType particleType() const;
+
+    void setSelected(bool selected);
+    bool selected() const;
+
+private:
+    ParticleGrid* m_particleGrid;
+    ParticleType m_particleType;
+
+    bool m_needsRedraw;
+    bool m_isSelected;
+
+    void markForRedraw();
+    
+    friend class ParticleGrid;
+
+};
 struct ParticleGrid
 {
     ParticleGrid(int w, int h, SDL_Renderer* renderer);
-    ~ParticleGrid();
-
-    struct Cell
-    {
-        Cell(int _x, int _y, ParticleType type = ParticleType::Air);
-
-        const int x, y;
-        char colorVariation;
-        
-    private:
-        ParticleType m_particleType;
-        
-        friend class ParticleGrid;
-
-    }; 
+    ~ParticleGrid(); 
     
     int width() const;
     int height() const;
 
     Cell* getCell(int x, int y);
-    void setCellParticleType(int x, int y, ParticleType type);
-    void setCellParticleType(Cell* cell, ParticleType type);
 
     bool bDrawGrid { false };
+    bool bHighlightSelected { true };
     void draw();
 
     void update();
@@ -55,4 +68,8 @@ private:
     void updateCell(int x, int y);
     void update_b2t();
     void update_t2b();
+
+    friend class Brush;
+    friend class Cell;
+
 };

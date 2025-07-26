@@ -2,7 +2,7 @@
 
 
 #define PARTICLE_TYPE_LIST \
-    X(Air)                 \
+    X(Vacuum)                 \
     X(Sand)                \
     X(Gravel)              \
     X(Dirt)                \

@@ -4,6 +4,8 @@
 #include <ctime>
 
 #include "particle_grid.h"
+#include "brush.h"
+
 #include "imgui.h"
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_sdlrenderer3.h"
@@ -33,16 +35,16 @@ int main(int argc, char** argv)
 
     ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
     ImGui_ImplSDLRenderer3_Init(renderer);
+
+    ImFont* roboto_med = guiIO.Fonts->AddFontFromFileTTF(IMGUI_FONTS_DIR"/Roboto-Medium.ttf");
+    roboto_med->Scale = 0.75f;
+    guiIO.Fonts->Build();
     ////////////////
 
     ParticleGrid grid(kGridWidth, kGridHeight, renderer);
+    Brush brush(5.f, ParticleType::Sand);
+    brush.setCanvas(&grid);
 
-    struct Brush
-    {
-        int x, y;
-        bool down { false };
-        ParticleType particleType { ParticleType::Sand };
-    } brush;
 
     Uint64 startTime, endTime;
     float elapsed, fps;
@@ -57,6 +59,8 @@ int main(int argc, char** argv)
         while (SDL_PollEvent(&e))
         {
             ImGui_ImplSDL3_ProcessEvent(&e);
+            brush.handleEvent(&e, guiIO.WantCaptureMouse);
+
             switch (e.type)
             {
             case SDL_EVENT_QUIT:
@@ -70,6 +74,10 @@ int main(int argc, char** argv)
                     grid.bDrawGrid = !grid.bDrawGrid;
                     break;
 
+                case SDLK_H:
+                    grid.bHighlightSelected = !grid.bHighlightSelected;
+                    break;
+
                 case SDLK_R:
                     grid.clear();
                     break;
@@ -80,40 +88,6 @@ int main(int argc, char** argv)
                 }
                 break;
 
-            case SDL_EVENT_MOUSE_BUTTON_UP:
-                switch(e.button.button)
-                {
-                case 1:
-                    brush.down = false;
-                    break;
-                
-                default:
-                    break;
-
-                }
-                break;
-                
-            case SDL_EVENT_MOUSE_BUTTON_DOWN:
-                if (guiIO.WantCaptureMouse)
-                {
-                    break;
-                }
-                switch (e.button.button)
-                {
-                case 1:
-                    brush.down = true;
-                    break;
-
-                default:
-                    break;
-
-                }
-                break;
-
-            case SDL_EVENT_MOUSE_MOTION:
-                brush.x = ((float)e.motion.x / kScreenWidth) * kGridWidth;
-                brush.y = ((float)e.motion.y / kScreenHeight) * kGridHeight;
-
             default:
                 break;
 
@@ -121,53 +95,55 @@ int main(int argc, char** argv)
         }
         ///////////////////
 
+        // Update //
+        brush.stroke();
+        grid.update();
+        ////////////
+
+        // Edit Sandbox //
         ImGui_ImplSDLRenderer3_NewFrame();
         ImGui_ImplSDL3_NewFrame();
         ImGui::NewFrame();
-        
-        //ImGui::SetNextWindowSize(ImVec2(100, 200), ImGuiCond_Once);
-        ImGui::Begin("Sandbox");
 
-        if (ImGui::BeginCombo("Particle Type", ParticleTypeNames[static_cast<int>(brush.particleType)]))
+        ImGui::Begin("Sandbox", NULL, ImGuiWindowFlags_AlwaysAutoResize);
+        ImGui::PushItemWidth(100.f);
+
+        if (ImGui::BeginCombo("Particle Type", ParticleTypeNames[static_cast<int>(brush.particleType())]))
         {
             for (int i = 0; i < static_cast<int>(ParticleType::COUNT); ++i)
             {
                 if (ImGui::Selectable(ParticleTypeNames[i]))
                 {
-                    brush.particleType = static_cast<ParticleType>(i);
+                    brush.setParticleType(static_cast<ParticleType>(i));
+                    //brush.particleType = static_cast<ParticleType>(i);
                 }
             }
             ImGui::EndCombo();
         }
+        float brushRadius = brush.radius();
+        if (ImGui::SliderFloat("Brush radius", &brushRadius, Brush::kMinRadius, Brush::kMaxRadius, "%.1f"))
+        {
+            brush.setRadius(brushRadius);
+        }
+        ImGui::Text("FPS: %f", fps);
 
-
+        ImGui::PopItemWidth();
         ImGui::End();
 
-        // Edit Sandbox //
-        if (brush.down)
-        {
-            grid.setCellParticleType(brush.x, brush.y, brush.particleType);
-        }
         //////////////////
         // Draw //
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
 
-        grid.update();
         grid.draw();
-
-        // ImGui
-        ImGui::Render();
-        ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
-        //////////
-
-        SDL_RenderPresent(renderer);
 
         endTime = SDL_GetPerformanceCounter();
         elapsed = (float)(endTime - startTime) / SDL_GetPerformanceFrequency();
         fps = 1.f / elapsed;
 
-        std::cout << "FPS: " << fps << std::endl;
+        ImGui::Render();
+        ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
+        SDL_RenderPresent(renderer);
     }
     
     SDL_DestroyRenderer(renderer);

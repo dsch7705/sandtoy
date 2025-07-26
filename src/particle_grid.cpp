@@ -1,4 +1,5 @@
 #include "particle_grid.h"
+#include "util.h"
 
 #include <SDL3/SDL.h>
 #include <cassert>
@@ -6,11 +7,51 @@
 #include <iostream>
 
 
-ParticleGrid::Cell::Cell(int _x, int _y, ParticleType type) 
+Cell::Cell(ParticleGrid* particleGrid, int _x, int _y, ParticleType type) 
     : x(_x), y(_y)
     , m_particleType(type)
+    , m_needsRedraw(false)
+    , m_isSelected(false)
 {
+    if (particleGrid == nullptr)
+    {
+        throw std::runtime_error("particleGrid must not be null");
+    }
+    m_particleGrid = particleGrid;
     colorVariation = std::rand() % 5;
+}
+void Cell::setParticleType(ParticleType type)
+{
+    if (type != m_particleType)
+    {
+        m_particleType = type;
+        markForRedraw();
+    }
+}
+ParticleType Cell::particleType() const
+{
+    return m_particleType;
+}
+void Cell::setSelected(bool selected)
+{
+    if (m_isSelected != selected)
+    {
+        m_isSelected = selected;
+        markForRedraw();
+    }
+}
+bool Cell::selected() const
+{
+    return m_isSelected;
+}
+
+void Cell::markForRedraw()
+{
+    if (!m_needsRedraw)
+    {
+        m_particleGrid->m_redrawCells.push_back(this);
+        m_needsRedraw = true;
+    }
 }
 
 ParticleGrid::ParticleGrid(const int w, const int h, SDL_Renderer* renderer)
@@ -23,10 +64,15 @@ ParticleGrid::ParticleGrid(const int w, const int h, SDL_Renderer* renderer)
         std::vector<Cell> row;
         for (int x = 0; x < w; ++x)
         {
-            row.emplace_back(x, y);
+            row.emplace_back(this, x, y);
+            //row.back().markForRedraw();
         }
 
         m_particles.push_back(std::move(row));
+        for (Cell& cell : m_particles.back())
+        {
+            cell.markForRedraw();
+        }
     }
 
     m_renderer = renderer;
@@ -51,7 +97,7 @@ int ParticleGrid::height() const
     return m_particles.size();
 }
 
-ParticleGrid::Cell* ParticleGrid::getCell(int x, int y)
+Cell* ParticleGrid::getCell(int x, int y)
 {
     if (y >= m_particles.size() || x >= m_particles[0].size())
     {
@@ -59,19 +105,6 @@ ParticleGrid::Cell* ParticleGrid::getCell(int x, int y)
     }
 
     return &m_particles[y][x];
-}
-void ParticleGrid::setCellParticleType(int x, int y, ParticleType type)
-{
-    Cell* cell = getCell(x, y);
-    setCellParticleType(cell, type);
-}
-void ParticleGrid::setCellParticleType(Cell* cell, ParticleType type)
-{
-    if (cell)
-    {
-        cell->m_particleType = type;
-        m_redrawCells.push_back(cell);
-    }
 }
 
 void ParticleGrid::draw()
@@ -86,7 +119,7 @@ void ParticleGrid::draw()
     }
     Uint32* pixelBuffer = static_cast<Uint32*>(pixels);
 
-    for (const Cell* cell : m_redrawCells)
+    for (Cell* cell : m_redrawCells)
     {
         Uint32 cellColor;
         switch (cell->m_particleType)
@@ -95,7 +128,7 @@ void ParticleGrid::draw()
             cellColor = 0xFF00FFFF;
             break;
 
-        case ParticleType::Air:
+        case ParticleType::Vacuum:
             cellColor = 0x00000000;
             break;
         
@@ -152,10 +185,17 @@ void ParticleGrid::draw()
 
         }
 
-        pixelBuffer[cell->y * (pitch / sizeof(Uint32)) + cell->x] = cellColor;
-        m_redrawCells.clear();
-    }
+        // Add brush overlay
+        if (bHighlightSelected && cell->selected())
+        {
+            cellColor = Util::blendRGBA(cellColor, 0xFFFFFF22);
+        }
 
+        pixelBuffer[cell->y * (pitch / sizeof(Uint32)) + cell->x] = cellColor;
+        cell->m_needsRedraw = false;
+    }
+    m_redrawCells.clear();
+    
     SDL_UnlockTexture(m_streamingTexture);
     SDL_RenderTexture(m_renderer, m_streamingTexture, nullptr, &m_rendererRect);
 
@@ -176,7 +216,7 @@ void ParticleGrid::clear()
     {
         for (Cell& cell : row)
         {
-            setCellParticleType(&cell, ParticleType::Air);
+            cell.setParticleType(ParticleType::Vacuum);
         }
     }
 }
@@ -218,12 +258,12 @@ void ParticleGrid::updateCell(int x, int y)
     case ParticleType::Dirt:
     case ParticleType::Sand:
         // Find suitable next cell
-        if ((cellNext = getCell(x, y + 1)) != nullptr && cellNext->m_particleType != ParticleType::Air)
+        if ((cellNext = getCell(x, y + 1)) != nullptr && cellNext->m_particleType != ParticleType::Vacuum)
         {
             int dir = std::rand() % 2 ? 1 : -1;
-            if ((cellNext = getCell(x + dir, y + 1)) != nullptr && cellNext->m_particleType != ParticleType::Air)
+            if ((cellNext = getCell(x + dir, y + 1)) != nullptr && cellNext->m_particleType != ParticleType::Vacuum)
             {
-                if ((cellNext = getCell(x - dir, y + 1)) != nullptr && cellNext->m_particleType != ParticleType::Air)
+                if ((cellNext = getCell(x - dir, y + 1)) != nullptr && cellNext->m_particleType != ParticleType::Vacuum)
                 {
                     cellNext = nullptr;
                 }
@@ -232,12 +272,12 @@ void ParticleGrid::updateCell(int x, int y)
     
         if (cellNext != nullptr)
         {
-            setCellParticleType(cellNext, cell->m_particleType);
-            setCellParticleType(cell, ParticleType::Air);
+            cellNext->setParticleType(cell->particleType());
+            cell->setParticleType(ParticleType::Vacuum);
         }
         break;
     
-    case ParticleType::Air:
+    case ParticleType::Vacuum:
         //m_activeParticles.remove(cell);
         break;
 
@@ -250,13 +290,20 @@ void ParticleGrid::update_b2t()
 {
     for (int y = height(); y >= 0; --y)
     {
-        for (int x = width(); x >= 0; --x)
+        int scanDir = (y % 2) ? 1 : -1;
+        int startX = (scanDir == 1) ? 0 : width();
+        int endX = (startX == 0) ? width() : -1;
+
+        int x = startX;
+        while (x != endX)
         {
             Cell* cell = getCell(x, y);
             if (cell != nullptr)
             {
                 updateCell(cell->x, cell->y);
             }
+
+            x += scanDir;
         }
     }
 }
