@@ -1,5 +1,6 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
+
 #include <iostream>
 #include <ctime>
 
@@ -34,8 +35,12 @@ static ParticleGrid* grid;
 static Brush* brush;
 static ImGuiIO* guiIO;
 
-static bool quit { false };
+static float guiBrushRadius;
+static bool guiShowBrushHighlight;
+static bool guiShowControls { false };
+static bool guiShowFPS { true };
 
+static bool quit { false };
 static void mainloop()
 {
     startTime = SDL_GetPerformanceCounter();
@@ -57,17 +62,27 @@ static void mainloop()
         case SDL_EVENT_KEY_DOWN:
             switch (e.key.key)
             {
-            case SDLK_G:
-                grid->toggleGridLines();
+            case SDLK_R:
+                grid->clear();
                 break;
 
             case SDLK_H:
                 brush->toggleHighlight();
                 break;
 
-            case SDLK_R:
-                grid->clear();
-                break;
+            case SDLK_C:
+                if (e.key.mod & SDL_KMOD_ALT)
+                {
+                    guiShowControls = !guiShowControls;
+                    break;
+                }
+
+            case SDLK_F:
+                if (e.key.mod & SDL_KMOD_ALT)
+                {
+                    guiShowFPS = !guiShowFPS;
+                    break;
+                }
 
             default:
                 break;
@@ -92,10 +107,11 @@ static void mainloop()
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
 
+    ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Once);
     ImGui::Begin("Sandbox", NULL, ImGuiWindowFlags_AlwaysAutoResize);
     ImGui::PushItemWidth(100.f);
 
-    if (ImGui::BeginCombo("Particle Type", ParticleTypeNames[static_cast<int>(brush->particleType())]))
+    if (ImGui::BeginCombo("Material", ParticleTypeNames[static_cast<int>(brush->particleType())]))
     {
         for (int i = 0; i < static_cast<int>(ParticleType::COUNT); ++i)
         {
@@ -107,26 +123,70 @@ static void mainloop()
         }
         ImGui::EndCombo();
     }
-
-    float guiBrushRadius = brush->radius();
+    guiBrushRadius = brush->radius();
     if (ImGui::SliderFloat("Brush radius", &guiBrushRadius, Brush::kMinRadius, Brush::kMaxRadius, "%.1f"))
     {
         brush->setRadius(guiBrushRadius);
     }
 
-    bool guiShowGridLines = grid->gridLines();
-    if (ImGui::Checkbox("Show grid lines", &guiShowGridLines))
-    {
-        grid->toggleGridLines();
-    }
+    ImGui::Separator();
 
-    bool guiShowBrushHighlight = brush->highlight();
+    guiShowBrushHighlight = brush->highlight();
     if (ImGui::Checkbox("Show brush highlight", &guiShowBrushHighlight))
     {
         brush->toggleHighlight();
     }
+    ImGui::Checkbox("Show controls", &guiShowControls);
+    ImGui::Checkbox("Show FPS", &guiShowFPS);
 
-    ImGui::Text("FPS: %f", fps);
+    if (guiShowControls)
+    {
+        ImGui::Separator();
+        ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
+
+        if (ImGui::BeginTable("table_controls", 2, ImGuiTableFlags_BordersInnerV))
+        {
+            ImGui::TableSetupColumn("Action");
+            ImGui::TableSetupColumn("Control");
+            ImGui::TableHeadersRow();
+
+            #define CTRL_TABLE_ENTRY(ACTION, CTRL) \
+            ImGui::TableNextRow(); \
+            ImGui::TableSetColumnIndex(0); \
+            ImGui::Text((ACTION)); \
+            ImGui::TableSetColumnIndex(1); \
+            ImGui::Text((CTRL)); \
+
+            #define CTRL_TABLE_SEPARATOR() \
+            ImGui::TableNextRow(); \
+            ImGui::TableSetColumnIndex(0); \
+            ImGui::Separator(); \
+            ImGui::TableSetColumnIndex(1); \
+            ImGui::Separator();
+
+            CTRL_TABLE_ENTRY("Draw (primary)", "Left Click");
+            CTRL_TABLE_ENTRY("Draw (secondary)", "Right Click");
+            CTRL_TABLE_ENTRY("Resize brush", "Scroll");
+            CTRL_TABLE_ENTRY("Cycle material", "Ctrl + Scroll");
+            CTRL_TABLE_ENTRY("Fill", "F");
+            CTRL_TABLE_ENTRY("Clear", "R");
+            
+            CTRL_TABLE_SEPARATOR();
+
+            CTRL_TABLE_ENTRY("Toggle Brush Highlight", "H");
+            CTRL_TABLE_ENTRY("Toggle Show Controls", "Alt + C");
+            CTRL_TABLE_ENTRY("Toggle Show FPS", "Alt + F");
+
+            ImGui::EndTable();
+        }
+
+        ImGui::PopStyleVar();
+    }
+    if (guiShowFPS)
+    {
+        ImGui::Separator();
+        ImGui::Text("FPS: %f", fps);
+    }
 
     ImGui::PopItemWidth();
     ImGui::End();

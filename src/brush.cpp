@@ -1,8 +1,10 @@
 #include "brush.h"
 
 #include <SDL3/SDL.h>
+
 #include <cmath>
 #include <iostream>
+#include <queue>
 
 
 Brush::Brush(float radius, ParticleType particleType)
@@ -22,7 +24,6 @@ void Brush::handleEvent(SDL_Event* event, bool isUiFocused)
     switch (event->type)
     {
     case SDL_EVENT_MOUSE_BUTTON_DOWN:
-        SDL_CaptureMouse(true);
         switch (event->button.button)
         {
         case 1:
@@ -52,7 +53,6 @@ void Brush::handleEvent(SDL_Event* event, bool isUiFocused)
         break;
 
     case SDL_EVENT_MOUSE_BUTTON_UP:
-        SDL_CaptureMouse(false);
         switch (event->button.button)
         {
         case 1:
@@ -91,6 +91,7 @@ void Brush::handleEvent(SDL_Event* event, bool isUiFocused)
         break;
 
     case SDL_EVENT_MOUSE_MOTION:
+    {
         int x = (event->motion.x / m_canvas->m_rendererRect.w) * m_canvas->width();
         int y = (event->motion.y / m_canvas->m_rendererRect.h) * m_canvas->height();
         if (x != m_x || y != m_y)
@@ -100,6 +101,20 @@ void Brush::handleEvent(SDL_Event* event, bool isUiFocused)
 
         m_x = x;
         m_y = y;
+        break;
+    }
+
+    case SDL_EVENT_KEY_DOWN:
+        switch (event->key.key)
+        {
+        case SDLK_F:
+            if (event->key.mod & SDL_KMOD_ALT) break;
+            floodFill();
+            break;
+
+        }
+
+    default:
         break;
 
     }
@@ -182,6 +197,28 @@ void Brush::stroke()
         for (Cell* cell : m_selectedCells)
         {
             cell->setParticleType(m_particleType);
+        }
+    }
+}
+void Brush::floodFill()
+{
+    std::queue<Cell*> q;
+    q.push(m_canvas->getCell(m_x, m_y));
+    ParticleType target = q.back()->particleType();
+
+    while (!q.empty())
+    {
+        Cell* cell = q.front();
+        q.pop();
+        if (cell == nullptr || cell->particleType() == m_particleType) continue;
+
+        if (cell->particleType() == target)
+        {
+            cell->setParticleType(m_particleType);
+            q.push(m_canvas->getCell(cell->x + 1, cell->y));
+            q.push(m_canvas->getCell(cell->x - 1, cell->y));
+            q.push(m_canvas->getCell(cell->x, cell->y + 1));
+            q.push(m_canvas->getCell(cell->x, cell->y - 1));
         }
     }
 }

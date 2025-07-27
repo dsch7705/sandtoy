@@ -106,15 +106,6 @@ Cell* ParticleGrid::getCell(int x, int y)
     return &m_particles[y][x];
 }
 
-void ParticleGrid::toggleGridLines()
-{
-    m_showGridLines = !m_showGridLines;
-}
-bool ParticleGrid::gridLines() const
-{
-    return m_showGridLines;
-}
-
 void ParticleGrid::draw()
 {
     void* pixels;
@@ -206,43 +197,20 @@ void ParticleGrid::draw()
     
     SDL_UnlockTexture(m_streamingTexture);
     SDL_RenderTexture(m_renderer, m_streamingTexture, nullptr, &m_rendererRect);
-
-    if (m_showGridLines)
-    {
-        SDL_SetRenderDrawColor(m_renderer, 255, 255, 255, 128);
-        drawGrid();
-    }
 }
 void ParticleGrid::update()
 {
     update_b2t();
     //update_t2b();
 }
-void ParticleGrid::clear()
+void ParticleGrid::clear(ParticleType type)
 {
     for (std::vector<Cell>& row : m_particles)
     {
         for (Cell& cell : row)
         {
-            cell.setParticleType(ParticleType::Vacuum);
+            cell.setParticleType(type);
         }
-    }
-}
-
-void ParticleGrid::drawGrid()
-{
-    int scaleX, scaleY;
-    SDL_GetCurrentRenderOutputSize(m_renderer, &scaleX, &scaleY);
-    scaleX /= width();
-    scaleY /= height();
-
-    for (int x = 0; x <= width(); ++x)
-    {
-        SDL_RenderLine(m_renderer, x * scaleX, 0, x * scaleX, height() * scaleY);
-    }
-    for (int y = 0; y <= height(); ++y)
-    {
-        SDL_RenderLine(m_renderer, 0, y * scaleY, width() * scaleX, y * scaleY);
     }
 }
 

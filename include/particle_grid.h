@@ -47,13 +47,10 @@ struct ParticleGrid
     int height() const;
 
     Cell* getCell(int x, int y);
-
-    void toggleGridLines();
-    bool gridLines() const;
     
     void draw();
     void update();
-    void clear();
+    void clear(ParticleType type = ParticleType::Vacuum);
 
 private:
     std::vector<std::vector<Cell>> m_particles;
@@ -63,10 +60,7 @@ private:
     SDL_Renderer* m_renderer;
     SDL_FRect m_rendererRect;
 
-    bool m_showGridLines { false };
     bool m_showBrushHighlight { true };
-
-    void drawGrid();
 
     void updateCell(int x, int y);
     void update_b2t();
