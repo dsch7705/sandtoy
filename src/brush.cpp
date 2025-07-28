@@ -228,8 +228,10 @@ void Brush::updateSelectedCells()
     {
         for (int x = colBegin; x <= colEnd; ++x)
         {
-            float dist = std::sqrt(std::pow(y - m_y, 2.f) + std::pow(x - m_x, 2.f));
-            if (dist <= m_radius)
+            float distSqr = (y - m_y) * (y - m_y) + (x - m_x) * (x - m_x);
+            //float dist = std::sqrt(std::pow(y - m_y, 2.f) + std::pow(x - m_x, 2.f));
+            if (distSqr <= m_radius * m_radius)
+            //if (dist <= m_radius)
             {
                 Cell* cell = m_canvas->getCell(x, y);
                 cell->setSelected(true);

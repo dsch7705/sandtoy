@@ -70,3 +70,34 @@ private:
     friend class Cell;
 
 };
+
+// Update Funcs //
+inline Cell* particleUpdateFunc_Standard(ParticleGrid* particleGrid, int x, int y)
+{
+    Cell* cell = particleGrid->getCell(x, y);
+    if (cell == nullptr)
+    {
+        return nullptr;
+    }
+
+    Cell* cellNext = nullptr;
+    // Find suitable next cell
+    if ((cellNext = particleGrid->getCell(x, y + 1)) != nullptr && cellNext->particleType() != ParticleType::Vacuum)
+    {
+        int dir = y % 2 ? 1 : -1;
+        if ((cellNext = particleGrid->getCell(x + dir, y + 1)) != nullptr && cellNext->particleType() != ParticleType::Vacuum)
+        {
+            if ((cellNext = particleGrid->getCell(x - dir, y + 1)) != nullptr && cellNext->particleType() != ParticleType::Vacuum)
+            {
+                cellNext = nullptr;
+            }
+        }
+    }
+
+    return cellNext;
+}
+inline Cell* particleUpdateFunc_Solid(ParticleGrid* particleGrid, int x, int y)
+{
+    return nullptr;
+}
+//////////////////

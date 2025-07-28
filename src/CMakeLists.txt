@@ -24,6 +24,8 @@ if (EMSCRIPTEN)
         target_compile_definitions(${EXE_NAME} PRIVATE EMSCRIPTEN=1)
         target_compile_options(${EXE_NAME} PRIVATE -Wno-macro-redefined)
         target_link_options(${EXE_NAME} PRIVATE "-sEXPORTED_FUNCTIONS=['_malloc', '_free', '_main']"
+                                                "-sASSERTIONS"
+                                                "-sALLOW_MEMORY_GROWTH=1"
                                                 "--shell-file=${EM_SHELL}")
 
         add_custom_command(

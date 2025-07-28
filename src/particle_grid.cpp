@@ -229,37 +229,26 @@ void ParticleGrid::updateCell(int x, int y)
     case ParticleType::Pink:
     case ParticleType::Blue:
 
-    case ParticleType::Stone:
     case ParticleType::Gravel:
     case ParticleType::Dirt:
     case ParticleType::Sand:
-        // Find suitable next cell
-        if ((cellNext = getCell(x, y + 1)) != nullptr && cellNext->m_particleType != ParticleType::Vacuum)
-        {
-            int dir = std::rand() % 2 ? 1 : -1;
-            if ((cellNext = getCell(x + dir, y + 1)) != nullptr && cellNext->m_particleType != ParticleType::Vacuum)
-            {
-                if ((cellNext = getCell(x - dir, y + 1)) != nullptr && cellNext->m_particleType != ParticleType::Vacuum)
-                {
-                    cellNext = nullptr;
-                }
-            }
-        }
-    
-        if (cellNext != nullptr)
-        {
-            cellNext->setParticleType(cell->particleType());
-            cell->setParticleType(ParticleType::Vacuum);
-        }
+        cellNext = particleUpdateFunc_Standard(this, x, y);
         break;
     
+    case ParticleType::Stone:
     case ParticleType::Vacuum:
-        //m_activeParticles.remove(cell);
+        cellNext = particleUpdateFunc_Solid(this, x, y);
         break;
 
     default:
         break;
 
+    }
+
+    if (cellNext != nullptr)
+    {
+        cellNext->setParticleType(cell->particleType());
+        cell->setParticleType(ParticleType::Vacuum);
     }
 }
 void ParticleGrid::update_b2t()

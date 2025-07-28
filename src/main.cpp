@@ -23,13 +23,16 @@ constexpr int kGridHeight { 256 };
 
 constexpr int kScreenWidth { kGridWidth * kCellScale };
 constexpr int kScreenHeight { kGridHeight * kCellScale };
+
+constexpr int kFrameCap { 20 };
+constexpr double kFrameDuration { 1. / kFrameCap };
 ///////////////
 
 static SDL_Window* window;
 static SDL_Renderer* renderer;
 
 static Uint64 startTime, endTime;
-static float deltaTime, fps;
+static double deltaTime, fps;
 
 static ParticleGrid* grid;
 static Brush* brush;
@@ -39,6 +42,8 @@ static float guiBrushRadius;
 static bool guiShowBrushHighlight;
 static bool guiShowControls { false };
 static bool guiShowFPS { true };
+
+static Uint64 freq = SDL_GetPerformanceFrequency();
 
 static bool quit { false };
 static void mainloop()
@@ -170,6 +175,7 @@ static void mainloop()
             CTRL_TABLE_ENTRY("Cycle material", "Ctrl + Scroll");
             CTRL_TABLE_ENTRY("Fill", "F");
             CTRL_TABLE_ENTRY("Clear", "R");
+            CTRL_TABLE_ENTRY("Undo", "Ctrl + Z");
             
             CTRL_TABLE_SEPARATOR();
 
@@ -199,11 +205,16 @@ static void mainloop()
     grid->draw();
 
     endTime = SDL_GetPerformanceCounter();
-    deltaTime = static_cast<float>(endTime - startTime) / SDL_GetPerformanceFrequency();
+    deltaTime = static_cast<double>(endTime - startTime) / freq;
 #ifdef EMSCRIPTEN
-    deltaTime = std::max(deltaTime, 0.001f);
+    deltaTime = std::max(deltaTime, 0.001);
 #endif
-    fps = 1.f / deltaTime;
+    if (deltaTime < kFrameDuration)
+    {
+        while (static_cast<double>(SDL_GetPerformanceCounter() - startTime) / freq < kFrameDuration) {}
+        deltaTime = kFrameDuration;
+    }
+    fps = 1. / deltaTime;
 
     ImGui::Render();
     ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
