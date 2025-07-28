@@ -1,5 +1,8 @@
 #include "particle_grid.h"
 
+#include <stack>
+#include <vector>
+
 
 // Forward Declarations //
 union SDL_Event;
@@ -30,13 +33,17 @@ public:
 
 private:
     int m_x, m_y;
+    float m_radius;
     bool m_isDown;
     
-    float m_radius;
     ParticleType m_particleType;
     ParticleType m_particleType2;
-
     ParticleGrid* m_canvas;
+
+    // Stores canvas states when edits are made
+    std::stack<std::vector<ParticleType>> m_canvasStateStack;
+    void pushCanvasState();
+    void popCanvasState();
 
     std::vector<Cell*> m_selectedCells;
     void updateSelectedCells();

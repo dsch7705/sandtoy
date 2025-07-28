@@ -24,6 +24,7 @@ void Brush::handleEvent(SDL_Event* event, bool isUiFocused)
     switch (event->type)
     {
     case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        pushCanvasState();
         switch (event->button.button)
         {
         case 1:
@@ -76,7 +77,7 @@ void Brush::handleEvent(SDL_Event* event, bool isUiFocused)
         break;
 
     case SDL_EVENT_MOUSE_WHEEL:
-        if (SDL_GetModState() & SDL_KMOD_LCTRL)
+        if (SDL_GetModState() & SDL_KMOD_CTRL)
         {
             int nextIdx = (static_cast<int>(m_particleType) + static_cast<int>(event->wheel.y) + static_cast<int>(ParticleType::COUNT)) 
                             % static_cast<int>(ParticleType::COUNT);
@@ -109,8 +110,15 @@ void Brush::handleEvent(SDL_Event* event, bool isUiFocused)
         {
         case SDLK_F:
             if (event->key.mod & SDL_KMOD_ALT) break;
+            pushCanvasState();
             floodFill();
             break;
+
+        case SDLK_Z:
+            if (event->key.mod & SDL_KMOD_CTRL)
+            {
+                popCanvasState();
+            }
 
         }
 
@@ -154,6 +162,46 @@ void Brush::toggleHighlight()
 bool Brush::highlight() const
 {
     return m_canvas->m_showBrushHighlight;
+}
+
+void Brush::pushCanvasState()
+{
+    std::vector<ParticleType> state;
+    state.reserve(m_canvas->width() * m_canvas->height());
+    for (const std::vector<Cell>& row : m_canvas->m_particles)
+    {
+        for (const Cell& cell : row)
+        {
+            state.push_back(cell.particleType());
+        }
+    }
+    m_canvasStateStack.push(std::move(state));
+}
+void Brush::popCanvasState()
+{
+    if (m_canvasStateStack.empty()) return;
+
+    size_t canvasSize = m_canvas->width() * m_canvas->height();
+    std::vector<ParticleType>& state = m_canvasStateStack.top();
+    if (state.size() == canvasSize)
+    {
+        int y = 0;
+        for (std::vector<Cell>& row : m_canvas->m_particles)
+        {
+            int x = 0;
+            for (Cell& cell : row)
+            {
+                cell.setParticleType(state[y * row.size() + x]);
+                ++x;
+            }
+            ++y;
+        }
+    }
+    else
+    {
+        std::cerr << __func__ << ": Canvas state size (" << state.size() << ") does not match current canvas size (" << canvasSize << " [" << m_canvas->width() << "x" << m_canvas->height() << "]); discarding\n";
+    }
+    m_canvasStateStack.pop();
 }
 
 void Brush::updateSelectedCells()

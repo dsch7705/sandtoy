@@ -113,7 +113,7 @@ void ParticleGrid::draw()
     SDL_LockTexture(m_streamingTexture, nullptr, &pixels, &pitch);
     if (pitch / sizeof(Uint32) != width())
     {
-        std::cout << "Streaming texture dimensions don't match those of the particle grid" << std::endl;
+        std::cerr << "Streaming texture dimensions don't match those of the particle grid" << std::endl;
         return;
     }
     Uint32* pixelBuffer = static_cast<Uint32*>(pixels);
