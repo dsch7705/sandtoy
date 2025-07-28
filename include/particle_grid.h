@@ -92,78 +92,41 @@ inline ParticleUpdate particleUpdateFunc_Standard(ParticleGrid* particleGrid, in
         return { .nextCell = nullptr, .mode = ParticleUpdate::NOOP };
     }
 
+    Cell* cellNext = nullptr;
+
+    #define TRY_UPDATE() \
+    do { \
+        if (cellNext) \
+        { \
+            int rand = std::rand(); \
+            switch (cellNext->particleType()) \
+            { \
+            case ParticleType::Air: \
+                if (rand % 15 == 0) { break; } \
+                return { .nextCell = cellNext, .mode = ParticleUpdate::Move }; \
+                break; \
+            case ParticleType::Water: \
+                if (rand % 3 == 0) { break; } \
+                return { .nextCell = cellNext, .mode = ParticleUpdate::Swap }; \
+                break; \
+            default: \
+                break; \
+            } \
+        } \
+    } while (0)
+
     // Down
-    Cell* cellNext = particleGrid->getCell(x, y + 1);
-    if (cellNext)
-    {
-        int rand = std::rand();
-        switch (cellNext->particleType())
-        {
-        case ParticleType::Air:
-            return { .nextCell = cellNext, .mode = ParticleUpdate::Move };
-            break;
-
-        case ParticleType::Water:
-            if (rand % 3 == 0)   // block downward movement, continue on
-                break;
-
-            return { .nextCell = cellNext, .mode = ParticleUpdate::Swap };
-            break;
-
-        default:
-            break;
-
-        }
-    }
+    cellNext = particleGrid->getCell(x, y + 1);
+    TRY_UPDATE();
         
     // Left/right diag
     int dir = x % 2 ? 1 : -1;
     cellNext = particleGrid->getCell(x + dir, y + 1);
-    if (cellNext)
-    {
-        int rand = std::rand();
-        switch (cellNext->particleType())
-        {
-        case ParticleType::Air:
-            return { .nextCell = cellNext, .mode = ParticleUpdate::Move };
-            break;
-
-        case ParticleType::Water:
-            if (rand % 3 == 0)   // block downward movement, continue on
-                break;
-
-            return { .nextCell = cellNext, .mode = ParticleUpdate::Swap };
-            break;
-
-        default:
-            break;
-
-        }
-    }
+    TRY_UPDATE();
 
     // Left/right diag
     cellNext = particleGrid->getCell(x - dir, y + 1);
-    if (cellNext)
-    {
-        int rand = std::rand();
-        switch (cellNext->particleType())
-        {
-        case ParticleType::Air:
-            return { .nextCell = cellNext, .mode = ParticleUpdate::Move };
-            break;
-
-        case ParticleType::Water:
-            if (rand % 3 == 0)   // block downward movement, continue on
-                break;
-
-            return { .nextCell = cellNext, .mode = ParticleUpdate::Swap };
-            break;
-
-        default:
-            break;
-
-        }
-    }
+    TRY_UPDATE();
 
     return { .nextCell = nullptr, .mode = ParticleUpdate::NOOP };
 }
