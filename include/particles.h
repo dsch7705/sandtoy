@@ -2,14 +2,15 @@
 
 
 #define PARTICLE_TYPE_LIST \
-    X(Vacuum)                 \
-    X(Sand)                \
-    X(Gravel)              \
-    X(Dirt)                \
-    X(Stone)               \
-    X(Rainbow)             \
-    X(Pink)                \
-    X(Blue)
+    X(Air) \
+    X(Sand) \
+    X(Gravel) \
+    X(Dirt) \
+    X(Stone) \
+    X(Rainbow) \
+    X(Pink) \
+    X(Blue) \
+    X(Water) 
 
 enum class ParticleType
 {

@@ -2,6 +2,7 @@
 
 #include <SDL3/SDL_rect.h>
 #include <vector>
+#include <cstdlib>
 
 #include "particles.h"
 
@@ -15,7 +16,7 @@ class Brush;
 //////////////////////////
 struct Cell
 {
-    Cell(ParticleGrid* particleGrid, int _x, int _y, ParticleType type = ParticleType::Vacuum);
+    Cell(ParticleGrid* particleGrid, int _x, int _y, ParticleType type = ParticleType::Air);
 
     const int x, y;
     char colorVariation;
@@ -50,7 +51,7 @@ struct ParticleGrid
     
     void draw();
     void update();
-    void clear(ParticleType type = ParticleType::Vacuum);
+    void clear(ParticleType type = ParticleType::Air);
 
 private:
     std::vector<std::vector<Cell>> m_particles;
@@ -72,32 +73,136 @@ private:
 };
 
 // Update Funcs //
-inline Cell* particleUpdateFunc_Standard(ParticleGrid* particleGrid, int x, int y)
+struct ParticleUpdate
+{
+    Cell* nextCell;
+    enum ParticleUpdateMode
+    {
+        Move,
+        Swap,
+        NOOP
+    } mode;
+};
+
+inline ParticleUpdate particleUpdateFunc_Standard(ParticleGrid* particleGrid, int x, int y)
 {
     Cell* cell = particleGrid->getCell(x, y);
     if (cell == nullptr)
     {
-        return nullptr;
+        return { .nextCell = nullptr, .mode = ParticleUpdate::NOOP };
     }
 
-    Cell* cellNext = nullptr;
-    // Find suitable next cell
-    if ((cellNext = particleGrid->getCell(x, y + 1)) != nullptr && cellNext->particleType() != ParticleType::Vacuum)
+    // Down
+    Cell* cellNext = particleGrid->getCell(x, y + 1);
+    if (cellNext)
     {
-        int dir = y % 2 ? 1 : -1;
-        if ((cellNext = particleGrid->getCell(x + dir, y + 1)) != nullptr && cellNext->particleType() != ParticleType::Vacuum)
+        int rand = std::rand();
+        switch (cellNext->particleType())
         {
-            if ((cellNext = particleGrid->getCell(x - dir, y + 1)) != nullptr && cellNext->particleType() != ParticleType::Vacuum)
-            {
-                cellNext = nullptr;
-            }
+        case ParticleType::Air:
+            return { .nextCell = cellNext, .mode = ParticleUpdate::Move };
+            break;
+
+        case ParticleType::Water:
+            if (rand % 3 == 0)   // block downward movement, continue on
+                break;
+
+            return { .nextCell = cellNext, .mode = ParticleUpdate::Swap };
+            break;
+
+        default:
+            break;
+
+        }
+    }
+        
+    // Left/right diag
+    int dir = x % 2 ? 1 : -1;
+    cellNext = particleGrid->getCell(x + dir, y + 1);
+    if (cellNext)
+    {
+        int rand = std::rand();
+        switch (cellNext->particleType())
+        {
+        case ParticleType::Air:
+            return { .nextCell = cellNext, .mode = ParticleUpdate::Move };
+            break;
+
+        case ParticleType::Water:
+            if (rand % 3 == 0)   // block downward movement, continue on
+                break;
+
+            return { .nextCell = cellNext, .mode = ParticleUpdate::Swap };
+            break;
+
+        default:
+            break;
+
         }
     }
 
-    return cellNext;
+    // Left/right diag
+    cellNext = particleGrid->getCell(x - dir, y + 1);
+    if (cellNext)
+    {
+        int rand = std::rand();
+        switch (cellNext->particleType())
+        {
+        case ParticleType::Air:
+            return { .nextCell = cellNext, .mode = ParticleUpdate::Move };
+            break;
+
+        case ParticleType::Water:
+            if (rand % 3 == 0)   // block downward movement, continue on
+                break;
+
+            return { .nextCell = cellNext, .mode = ParticleUpdate::Swap };
+            break;
+
+        default:
+            break;
+
+        }
+    }
+
+    return { .nextCell = nullptr, .mode = ParticleUpdate::NOOP };
 }
-inline Cell* particleUpdateFunc_Solid(ParticleGrid* particleGrid, int x, int y)
+inline ParticleUpdate particleUpdateFunc_Solid(ParticleGrid* particleGrid, int x, int y)
 {
-    return nullptr;
+    return { .nextCell = nullptr, .mode = ParticleUpdate::NOOP };
+}
+inline ParticleUpdate particleUpdateFunc_Fluid(ParticleGrid* particleGrid, int x, int y)
+{
+    Cell* cell = particleGrid->getCell(x, y);
+    if (cell == nullptr)
+    {
+        return { .nextCell = nullptr, .mode = ParticleUpdate::NOOP };
+    }
+
+    // Down
+    Cell* cellNext = particleGrid->getCell(x, y + 1);
+    if (cellNext && cellNext->particleType() == ParticleType::Air)
+        return { .nextCell = cellNext, .mode = ParticleUpdate::Move };
+
+    int dir = std::rand() % 2 ? 1 : -1;
+    // Diag
+    cellNext = particleGrid->getCell(x + dir, y + 1);
+    if (cellNext && cellNext->particleType() == ParticleType::Air)
+        return { .nextCell = cellNext, .mode = ParticleUpdate::Move };
+
+    cellNext = particleGrid->getCell(x - dir, y + 1);
+    if (cellNext && cellNext->particleType() == ParticleType::Air)
+        return { .nextCell = cellNext, .mode = ParticleUpdate::Move };
+
+    // Horizontal
+    cellNext = particleGrid->getCell(x + dir, y);
+    if (cellNext && cellNext->particleType() == ParticleType::Air)
+        return { .nextCell = cellNext, .mode = ParticleUpdate::Move };
+
+    cellNext = particleGrid->getCell(x - dir, y);
+    if (cellNext && cellNext->particleType() == ParticleType::Air)
+        return { .nextCell = cellNext, .mode = ParticleUpdate::Move };
+
+    return { .nextCell = nullptr, .mode = ParticleUpdate::NOOP };
 }
 //////////////////

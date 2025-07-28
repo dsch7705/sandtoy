@@ -24,8 +24,8 @@ constexpr int kGridHeight { 256 };
 constexpr int kScreenWidth { kGridWidth * kCellScale };
 constexpr int kScreenHeight { kGridHeight * kCellScale };
 
-constexpr int kFrameCap { 20 };
-constexpr double kFrameDuration { 1. / kFrameCap };
+constexpr int kFrameCap { 0 };
+constexpr double kFrameDuration { kFrameCap ? 1. / kFrameCap : -1 };
 ///////////////
 
 static SDL_Window* window;
@@ -209,7 +209,7 @@ static void mainloop()
 #ifdef EMSCRIPTEN
     deltaTime = std::max(deltaTime, 0.001);
 #endif
-    if (deltaTime < kFrameDuration)
+    if (kFrameDuration > 0 && deltaTime < kFrameDuration)
     {
         while (static_cast<double>(SDL_GetPerformanceCounter() - startTime) / freq < kFrameDuration) {}
         deltaTime = kFrameDuration;

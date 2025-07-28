@@ -13,7 +13,7 @@ Brush::Brush(float radius, ParticleType particleType)
     , m_isDown(false)
     , m_radius(radius)
     , m_particleType(particleType)
-    , m_particleType2(ParticleType::Vacuum)
+    , m_particleType2(ParticleType::Air)
     , m_canvas(nullptr)
 {
 

@@ -127,7 +127,7 @@ void ParticleGrid::draw()
             cellColor = 0xFF00FFFF;
             break;
 
-        case ParticleType::Vacuum:
+        case ParticleType::Air:
             cellColor = 0x00000000;
             break;
         
@@ -180,7 +180,14 @@ void ParticleGrid::draw()
             Uint32 choices[] = { 0x3A75C4FF, 0x4682B4FF, 0x5B9BD5FF, 0x4F83CCFF, 0x357EC7FF };
             cellColor = choices[cell->colorVariation];
             break;
-        }   
+        }
+
+        case ParticleType::Water:
+        {
+            Uint32 choices[] = { 0x4DA6FF66, 0x4CA4F966, 0x4BA2F566, 0x4CA3FB66, 0x4EA7FD66 };
+            cellColor = choices[cell->colorVariation];
+            break;
+        }
 
         }
 
@@ -222,7 +229,7 @@ void ParticleGrid::updateCell(int x, int y)
         return;
     }
 
-    Cell* cellNext = nullptr;
+    ParticleUpdate update = { .nextCell = nullptr, .mode = ParticleUpdate::NOOP };
     switch (cell->m_particleType)
     {
     case ParticleType::Rainbow:
@@ -232,12 +239,16 @@ void ParticleGrid::updateCell(int x, int y)
     case ParticleType::Gravel:
     case ParticleType::Dirt:
     case ParticleType::Sand:
-        cellNext = particleUpdateFunc_Standard(this, x, y);
+        update = particleUpdateFunc_Standard(this, x, y);
+        break;
+    
+    case ParticleType::Water:
+        update = particleUpdateFunc_Fluid(this, x, y);
         break;
     
     case ParticleType::Stone:
-    case ParticleType::Vacuum:
-        cellNext = particleUpdateFunc_Solid(this, x, y);
+    case ParticleType::Air:
+        update = particleUpdateFunc_Solid(this, x, y);
         break;
 
     default:
@@ -245,10 +256,25 @@ void ParticleGrid::updateCell(int x, int y)
 
     }
 
-    if (cellNext != nullptr)
+    switch (update.mode)
     {
-        cellNext->setParticleType(cell->particleType());
-        cell->setParticleType(ParticleType::Vacuum);
+    case ParticleUpdate::Move:
+        update.nextCell->setParticleType(cell->particleType());
+        cell->setParticleType(ParticleType::Air);
+        break;
+
+    case ParticleUpdate::Swap:
+    {
+        ParticleType tmp = cell->particleType();
+        cell->setParticleType(update.nextCell->particleType());
+        update.nextCell->setParticleType(tmp);
+        break;
+    }
+
+    case ParticleUpdate::NOOP:
+    default:
+        break;
+
     }
 }
 void ParticleGrid::update_b2t()
