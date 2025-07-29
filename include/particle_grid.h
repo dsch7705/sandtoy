@@ -128,6 +128,8 @@ inline ParticleUpdate particleUpdateFunc_Standard(ParticleGrid* particleGrid, in
     cellNext = particleGrid->getCell(x - dir, y + 1);
     TRY_UPDATE();
 
+    #undef TRY_UPDATE
+
     return { .nextCell = nullptr, .mode = ParticleUpdate::NOOP };
 }
 inline ParticleUpdate particleUpdateFunc_Solid(ParticleGrid* particleGrid, int x, int y)
@@ -142,29 +144,45 @@ inline ParticleUpdate particleUpdateFunc_Fluid(ParticleGrid* particleGrid, int x
         return { .nextCell = nullptr, .mode = ParticleUpdate::NOOP };
     }
 
-    // Down
-    Cell* cellNext = particleGrid->getCell(x, y + 1);
-    if (cellNext && cellNext->particleType() == ParticleType::Air)
-        return { .nextCell = cellNext, .mode = ParticleUpdate::Move };
+    Cell* cellNext = nullptr;
 
+    #define TRY_UPDATE() \
+    do { \
+        if (cellNext) \
+        { \
+            int rand = std::rand(); \
+            switch (cellNext->particleType()) \
+            { \
+            case ParticleType::Air: \
+                if (rand % 30 == 0) { break; } \
+                return { .nextCell = cellNext, .mode = ParticleUpdate::Move }; \
+                break; \
+            default: \
+                break; \
+            } \
+        } \
+    } while (0)
+
+    // Down
+    cellNext = particleGrid->getCell(x, y + 1);
+    TRY_UPDATE();
+        
+    // diag
     int dir = std::rand() % 2 ? 1 : -1;
-    // Diag
     cellNext = particleGrid->getCell(x + dir, y + 1);
-    if (cellNext && cellNext->particleType() == ParticleType::Air)
-        return { .nextCell = cellNext, .mode = ParticleUpdate::Move };
+    TRY_UPDATE();
 
     cellNext = particleGrid->getCell(x - dir, y + 1);
-    if (cellNext && cellNext->particleType() == ParticleType::Air)
-        return { .nextCell = cellNext, .mode = ParticleUpdate::Move };
+    TRY_UPDATE();
 
-    // Horizontal
+    // horizontal
     cellNext = particleGrid->getCell(x + dir, y);
-    if (cellNext && cellNext->particleType() == ParticleType::Air)
-        return { .nextCell = cellNext, .mode = ParticleUpdate::Move };
+    TRY_UPDATE();
 
     cellNext = particleGrid->getCell(x - dir, y);
-    if (cellNext && cellNext->particleType() == ParticleType::Air)
-        return { .nextCell = cellNext, .mode = ParticleUpdate::Move };
+    TRY_UPDATE();
+
+    #undef TRY_UPDATE
 
     return { .nextCell = nullptr, .mode = ParticleUpdate::NOOP };
 }
