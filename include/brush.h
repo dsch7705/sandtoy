@@ -41,7 +41,7 @@ private:
     ParticleGrid* m_canvas;
 
     // Stores canvas states when edits are made
-    std::stack<std::vector<ParticleType>> m_canvasStateStack;
+    std::stack<std::vector<ParticleState>> m_canvasStateStack;
     void pushCanvasState();
     void popCanvasState();
 

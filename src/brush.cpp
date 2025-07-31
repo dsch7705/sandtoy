@@ -166,13 +166,13 @@ bool Brush::highlight() const
 
 void Brush::pushCanvasState()
 {
-    std::vector<ParticleType> state;
+    std::vector<ParticleState> state;
     state.reserve(m_canvas->width() * m_canvas->height());
     for (const std::vector<Cell>& row : m_canvas->m_particles)
     {
         for (const Cell& cell : row)
         {
-            state.push_back(cell.particleType());
+            state.push_back(cell.particleState());
         }
     }
     m_canvasStateStack.push(std::move(state));
@@ -182,7 +182,7 @@ void Brush::popCanvasState()
     if (m_canvasStateStack.empty()) return;
 
     size_t canvasSize = m_canvas->width() * m_canvas->height();
-    std::vector<ParticleType>& state = m_canvasStateStack.top();
+    std::vector<ParticleState>& state = m_canvasStateStack.top();
     if (state.size() == canvasSize)
     {
         int y = 0;
@@ -191,7 +191,7 @@ void Brush::popCanvasState()
             int x = 0;
             for (Cell& cell : row)
             {
-                cell.setParticleType(state[y * row.size() + x]);
+                cell.setParticleState(state[y * row.size() + x]);
                 ++x;
             }
             ++y;
@@ -246,7 +246,7 @@ void Brush::stroke()
     {
         for (Cell* cell : m_selectedCells)
         {
-            cell->setParticleType(m_particleType);
+            cell->setParticleState(defaultParticleState(m_particleType));
         }
     }
 }
@@ -254,17 +254,17 @@ void Brush::floodFill()
 {
     std::queue<Cell*> q;
     q.push(m_canvas->getCell(m_x, m_y));
-    ParticleType target = q.back()->particleType();
+    ParticleType target = q.back()->particleState().type;
 
     while (!q.empty())
     {
         Cell* cell = q.front();
         q.pop();
-        if (cell == nullptr || cell->particleType() == m_particleType) continue;
+        if (cell == nullptr || cell->particleState().type == m_particleType) continue;
 
-        if (cell->particleType() == target)
+        if (cell->particleState().type == target)
         {
-            cell->setParticleType(m_particleType);
+            cell->setParticleState(defaultParticleState(m_particleType));
             q.push(m_canvas->getCell(cell->x + 1, cell->y));
             q.push(m_canvas->getCell(cell->x - 1, cell->y));
             q.push(m_canvas->getCell(cell->x, cell->y + 1));
