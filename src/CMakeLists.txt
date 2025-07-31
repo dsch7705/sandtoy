@@ -1,5 +1,6 @@
 set(SRC main.cpp
         particle_grid.cpp
+        particles.cpp
         brush.cpp
         util.cpp)
 

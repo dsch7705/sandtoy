@@ -93,8 +93,8 @@ void Brush::handleEvent(SDL_Event* event, bool isUiFocused)
 
     case SDL_EVENT_MOUSE_MOTION:
     {
-        int x = (event->motion.x / m_canvas->m_rendererRect.w) * m_canvas->width();
-        int y = (event->motion.y / m_canvas->m_rendererRect.h) * m_canvas->height();
+        int x = (event->motion.x / m_canvas->m_rendererRect.w) * m_canvas->width;
+        int y = (event->motion.y / m_canvas->m_rendererRect.h) * m_canvas->height;
         if (x != m_x || y != m_y)
         {
             updateSelectedCells();
@@ -167,13 +167,10 @@ bool Brush::highlight() const
 void Brush::pushCanvasState()
 {
     std::vector<ParticleState> state;
-    state.reserve(m_canvas->width() * m_canvas->height());
-    for (const std::vector<Cell>& row : m_canvas->m_particles)
+    state.reserve(m_canvas->width * m_canvas->height);
+    for (const Cell& cell : m_canvas->m_particles)
     {
-        for (const Cell& cell : row)
-        {
-            state.push_back(cell.particleState());
-        }
+        state.push_back(cell.particleState());
     }
     m_canvasStateStack.push(std::move(state));
 }
@@ -181,25 +178,31 @@ void Brush::popCanvasState()
 {
     if (m_canvasStateStack.empty()) return;
 
-    size_t canvasSize = m_canvas->width() * m_canvas->height();
+    size_t canvasSize = m_canvas->width * m_canvas->height;
     std::vector<ParticleState>& state = m_canvasStateStack.top();
     if (state.size() == canvasSize)
     {
-        int y = 0;
-        for (std::vector<Cell>& row : m_canvas->m_particles)
+        //int y = 0;
+        //for (std::vector<Cell>& row : m_canvas->m_particles)
+        //{
+        //    int x = 0;
+        //    for (Cell& cell : row)
+        //    {
+        //        cell.setParticleState(state[y * row.size() + x]);
+        //        ++x;
+        //    }
+        //    ++y;
+        //}
+        int i = 0;
+        for (Cell& cell : m_canvas->m_particles)
         {
-            int x = 0;
-            for (Cell& cell : row)
-            {
-                cell.setParticleState(state[y * row.size() + x]);
-                ++x;
-            }
-            ++y;
+            cell.setParticleState(state[i]);
+            ++i;
         }
     }
     else
     {
-        std::cerr << __func__ << ": Canvas state size (" << state.size() << ") does not match current canvas size (" << canvasSize << " [" << m_canvas->width() << "x" << m_canvas->height() << "]); discarding\n";
+        std::cerr << __func__ << ": Canvas state size (" << state.size() << ") does not match current canvas size (" << canvasSize << " [" << m_canvas->width << "x" << m_canvas->height << "]); discarding\n";
     }
     m_canvasStateStack.pop();
 }
@@ -219,10 +222,10 @@ void Brush::updateSelectedCells()
     }
 
     const int rowBegin = std::max(0, (int)(m_y - m_radius));
-    const int rowEnd   = std::min(m_canvas->height() - 1, (int)(m_y + m_radius));
+    const int rowEnd   = std::min(m_canvas->height - 1, (int)(m_y + m_radius));
 
     const int colBegin = std::max(0, (int)(m_x - m_radius));
-    const int colEnd = std::min(m_canvas->width() - 1, (int)(m_x + m_radius));
+    const int colEnd = std::min(m_canvas->width - 1, (int)(m_x + m_radius));
 
     for (int y = rowBegin; y <= rowEnd; ++y)
     {

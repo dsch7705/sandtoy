@@ -17,14 +17,14 @@
 
 
 // Constants //
-constexpr int kCellScale { 3 };
-constexpr int kGridWidth { 512 };
-constexpr int kGridHeight { 256 };
+constexpr int kCellScale { 6 };
+constexpr int kGridWidth { 256 };
+constexpr int kGridHeight { 128 };
 
 constexpr int kScreenWidth { kGridWidth * kCellScale };
 constexpr int kScreenHeight { kGridHeight * kCellScale };
 
-constexpr int kFrameCap { 0 };
+constexpr int kFrameCap { 240 };
 constexpr double kFrameDuration { kFrameCap ? 1. / kFrameCap : -1 };
 ///////////////
 

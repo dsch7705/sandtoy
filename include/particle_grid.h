@@ -46,8 +46,8 @@ struct ParticleGrid
     ParticleGrid(int w, int h, SDL_Renderer* renderer);
     ~ParticleGrid(); 
     
-    int width() const;
-    int height() const;
+    const int width;
+    const int height;
 
     Cell* getCell(int x, int y);
     
@@ -56,7 +56,8 @@ struct ParticleGrid
     void clear(ParticleType type = ParticleType::Air);
 
 private:
-    std::vector<std::vector<Cell>> m_particles;
+    std::vector<Cell> m_particles;
+    std::vector<std::pair<int, int>> m_coords;
     std::vector<Cell*> m_redrawCells;
 
     SDL_Texture* m_streamingTexture;
@@ -199,7 +200,7 @@ inline ParticleUpdate particleUpdateFunc_Gas(ParticleGrid* particleGrid, int x, 
     if (rand % 50 == 0)
     {
         ParticleState nextState = cell->particleState();
-        if (--nextState.life == 0)
+        if (--nextState.life <= 0)
         {
             cell->setParticleState(defaultParticleState(ParticleType::Water));
             return doNothing;
@@ -251,6 +252,13 @@ inline ParticleUpdate particleUpdateFunc_Gas(ParticleGrid* particleGrid, int x, 
     if (cellNext->particleState().type == ParticleType::Air)
     {
         return { .nextCell = cellNext, .mode = ParticleUpdate::Move };
+    }
+    else if (cellNext->particleState().type == ParticleType::Water)
+    {
+        ParticleState newState = cell->particleState();
+        newState.life -= 10;
+        cell->setParticleState(newState);
+        return doNothing;
     }
 
     return { .nextCell = nullptr, .mode = ParticleUpdate::NOOP };
