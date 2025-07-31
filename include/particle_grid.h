@@ -87,7 +87,7 @@ struct ParticleUpdate
 };
 constexpr ParticleUpdate doNothing { .nextCell = nullptr, .mode = ParticleUpdate::NOOP };
 
-inline ParticleUpdate particleUpdateFunc_Standard(ParticleGrid* particleGrid, int x, int y)
+inline ParticleUpdate particleUpdateFunc_Solid(ParticleGrid* particleGrid, int x, int y)
 {
     Cell* cell = particleGrid->getCell(x, y);
     if (cell == nullptr)
@@ -135,11 +135,7 @@ inline ParticleUpdate particleUpdateFunc_Standard(ParticleGrid* particleGrid, in
 
     return doNothing;
 }
-inline ParticleUpdate particleUpdateFunc_Solid(ParticleGrid* particleGrid, int x, int y)
-{
-    return doNothing;
-}
-inline ParticleUpdate particleUpdateFunc_Fluid(ParticleGrid* particleGrid, int x, int y)
+inline ParticleUpdate particleUpdateFunc_Liquid(ParticleGrid* particleGrid, int x, int y)
 {
     Cell* cell = particleGrid->getCell(x, y);
     if (cell == nullptr)
@@ -211,7 +207,7 @@ inline ParticleUpdate particleUpdateFunc_Gas(ParticleGrid* particleGrid, int x, 
         cell->setParticleState(nextState);
     }
 
-    switch (rand % 5)
+    switch (rand % 7)
     {
     case 0:
         cellNext = particleGrid->getCell(x, y - 1);
@@ -233,6 +229,14 @@ inline ParticleUpdate particleUpdateFunc_Gas(ParticleGrid* particleGrid, int x, 
         cellNext = particleGrid->getCell(x + 1, y);
         break;
 
+    case 5:
+        cellNext = particleGrid->getCell(x - 1, y + 1);
+        break;
+
+    case 6:
+        cellNext = particleGrid->getCell(x + 1, y + 1);
+        break;
+
     default:
         cellNext = nullptr;
         break;
@@ -250,5 +254,9 @@ inline ParticleUpdate particleUpdateFunc_Gas(ParticleGrid* particleGrid, int x, 
     }
 
     return { .nextCell = nullptr, .mode = ParticleUpdate::NOOP };
+}
+inline ParticleUpdate particleUpdateFunc_Static(ParticleGrid* particleGrid, int x, int y)
+{
+    return doNothing;
 }
 //////////////////

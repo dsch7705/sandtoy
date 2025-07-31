@@ -1,29 +1,42 @@
 #pragma once
 
 
-#define PARTICLE_TYPE_LIST \
-    X(Air) \
-    X(Sand) \
-    X(Gravel) \
-    X(Dirt) \
-    X(Stone) \
-    X(Rainbow) \
-    X(Pink) \
-    X(Blue) \
-    X(Water) \
-    X(Steam)
+enum class ParticlePhase
+{
+    Solid,
+    Liquid,
+    Gas,
+    Static
+};
+#define PARTICLE_LIST \
+    X(Sand, ParticlePhase::Solid) \
+    X(Stone, ParticlePhase::Static) \
+    X(Water, ParticlePhase::Liquid) \
+    X(Gravel, ParticlePhase::Solid) \
+    X(Dirt, ParticlePhase::Solid) \
+    X(Blue, ParticlePhase::Solid) \
+    X(Pink, ParticlePhase::Solid) \
+    X(Rainbow, ParticlePhase::Solid) \
+    X(Air, ParticlePhase::Static) \
+    X(Steam, ParticlePhase::Gas)
 
 enum class ParticleType
 {
-#define X(NAME) NAME,
-    PARTICLE_TYPE_LIST
+#define X(NAME, PHASE) NAME,
+    PARTICLE_LIST
 #undef X
     COUNT
 };
-static const char* ParticleTypeNames[] = 
+static constexpr const char* ParticleTypeNames[] = 
 {
-#define X(NAME) #NAME,
-    PARTICLE_TYPE_LIST
+#define X(NAME, PHASE) #NAME,
+    PARTICLE_LIST
+#undef X
+};
+static constexpr ParticlePhase ParticlePhases[] =
+{
+#define X(NAME, PHASE) PHASE,
+    PARTICLE_LIST
 #undef X
 };
 
