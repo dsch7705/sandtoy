@@ -4,6 +4,8 @@
 #include <SDL3/SDL.h>
 #include <cassert>
 #include <iostream>
+#include <algorithm>
+#include <random>
 
 
 Cell::Cell(ParticleGrid* particleGrid, int _x, int _y, ParticleState particleState) 
@@ -54,23 +56,21 @@ void Cell::markForRedraw()
 }
 
 ParticleGrid::ParticleGrid(const int w, const int h, SDL_Renderer* renderer)
+    : width(w)
+    , height(h)
 {
     assert(w > 0 && "w must be greater than 0");
     assert(h > 0 && "h must be greater than 0");
 
-    for (int y = 0; y < h; ++y)
+    m_particles.reserve(width * height);
+    for (int y = 0; y < height; ++y)
     {
-        std::vector<Cell> row;
-        for (int x = 0; x < w; ++x)
+        for (int x = 0; x < width; ++x)
         {
-            row.emplace_back(this, x, y);
-            //row.back().markForRedraw();
-        }
+            m_particles.emplace_back(this, x, y);
+            m_coords.emplace_back(x, y);
 
-        m_particles.push_back(std::move(row));
-        for (Cell& cell : m_particles.back())
-        {
-            cell.markForRedraw();
+            m_particles.back().markForRedraw();
         }
     }
 
@@ -87,23 +87,14 @@ ParticleGrid::~ParticleGrid()
     SDL_DestroyTexture(m_streamingTexture);
 }
 
-int ParticleGrid::width() const
-{
-    return m_particles[0].size();
-}
-int ParticleGrid::height() const
-{
-    return m_particles.size();
-}
-
 Cell* ParticleGrid::getCell(int x, int y)
 {
-    if (y >= m_particles.size() || x >= m_particles[0].size())
+    if (y >= height || y < 0 || x >= width || x < 0)
     {
         return nullptr;
     }
 
-    return &m_particles[y][x];
+    return &m_particles[y * width + x];
 }
 
 void ParticleGrid::draw()
@@ -111,7 +102,7 @@ void ParticleGrid::draw()
     void* pixels;
     int pitch;
     SDL_LockTexture(m_streamingTexture, nullptr, &pixels, &pitch);
-    if (pitch / sizeof(Uint32) != width())
+    if (pitch / sizeof(Uint32) != width)
     {
         std::cerr << "Streaming texture dimensions don't match those of the particle grid" << std::endl;
         return;
@@ -214,17 +205,21 @@ void ParticleGrid::draw()
 }
 void ParticleGrid::update()
 {
-    update_b2t();
-    //update_t2b();
+    static std::random_device rd;
+    static std::mt19937 g(rd());
+    
+    std::shuffle(m_coords.begin(), m_coords.end(), g);
+    for (const std::pair<int, int>& coord : m_coords)
+    {
+        updateCell(coord.first, coord.second);
+    }
+    //update_b2t();
 }
 void ParticleGrid::clear(ParticleType type)
 {
-    for (std::vector<Cell>& row : m_particles)
+    for (Cell& cell : m_particles)
     {
-        for (Cell& cell : row)
-        {
-            cell.setParticleState(defaultParticleState(type));
-        }
+        cell.setParticleState(defaultParticleState(type));
     }
 }
 
@@ -283,11 +278,11 @@ void ParticleGrid::updateCell(int x, int y)
 }
 void ParticleGrid::update_b2t()
 {
-    for (int y = height(); y >= 0; --y)
+    for (int y = height; y >= 0; --y)
     {
         int scanDir = (y % 2) ? 1 : -1;
-        int startX = (scanDir == 1) ? 0 : width();
-        int endX = (startX == 0) ? width() : -1;
+        int startX = (scanDir == 1) ? 0 : width;
+        int endX = (startX == 0) ? width : -1;
 
         int x = startX;
         while (x != endX)
@@ -304,9 +299,9 @@ void ParticleGrid::update_b2t()
 }
 void ParticleGrid::update_t2b()
 {
-    for (int y = 0; y < height(); ++y)
+    for (int y = 0; y < height; ++y)
     {
-        for (int x = 0; x < width(); ++x)
+        for (int x = 0; x < width; ++x)
         {
             Cell* cell = getCell(x, y);
             if (cell != nullptr)

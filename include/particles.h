@@ -44,6 +44,8 @@ struct ParticleState
 {
     ParticleType type;
     int life;
+
+    ParticlePhase phase() const;
 };
 constexpr ParticleState defaultParticleState(ParticleType type)
 {
