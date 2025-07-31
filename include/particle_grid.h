@@ -256,9 +256,16 @@ inline ParticleUpdate particleUpdateFunc_Gas(ParticleGrid* particleGrid, int x, 
     else if (cellNext->particleState().type == ParticleType::Water)
     {
         ParticleState newState = cell->particleState();
-        newState.life -= 10;
+        newState.life -= 30;
         cell->setParticleState(newState);
-        return doNothing;
+        return { .nextCell = cellNext, .mode = ParticleUpdate::Swap };
+    }
+    else if (cellNext->particleState().phase() == ParticlePhase::Solid)
+    {
+        ParticleState newState = cell->particleState();
+        newState.life -= 20;
+        cell->setParticleState(newState);
+        return { .nextCell = cellNext, .mode = ParticleUpdate::Swap };
     }
 
     return { .nextCell = nullptr, .mode = ParticleUpdate::NOOP };
