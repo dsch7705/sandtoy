@@ -237,29 +237,22 @@ void ParticleGrid::updateCell(int x, int y)
     }
 
     ParticleUpdate update = { .nextCell = nullptr, .mode = ParticleUpdate::NOOP };
-    switch (cell->particleState().type)
+    switch (ParticlePhases[(int)(cell->particleState().type)])
     {
-    case ParticleType::Rainbow:
-    case ParticleType::Pink:
-    case ParticleType::Blue:
-
-    case ParticleType::Gravel:
-    case ParticleType::Dirt:
-    case ParticleType::Sand:
-        update = particleUpdateFunc_Standard(this, x, y);
-        break;
-    
-    case ParticleType::Water:
-        update = particleUpdateFunc_Fluid(this, x, y);
-        break;
-    
-    case ParticleType::Stone:
-    case ParticleType::Air:
+    case ParticlePhase::Solid:
         update = particleUpdateFunc_Solid(this, x, y);
         break;
-
-    case ParticleType::Steam:
+    
+    case ParticlePhase::Liquid:
+        update = particleUpdateFunc_Liquid(this, x, y);
+        break;
+    
+    case ParticlePhase::Gas:
         update = particleUpdateFunc_Gas(this, x, y);
+        break;
+
+    case ParticlePhase::Static:
+        update = particleUpdateFunc_Static(this, x, y);
         break;
 
     default:
