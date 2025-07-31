@@ -6,9 +6,9 @@
 #include <iostream>
 
 
-Cell::Cell(ParticleGrid* particleGrid, int _x, int _y, ParticleType type) 
+Cell::Cell(ParticleGrid* particleGrid, int _x, int _y, ParticleState particleState) 
     : x(_x), y(_y)
-    , m_particleType(type)
+    , m_particleState(particleState)
     , m_needsRedraw(false)
     , m_isSelected(false)
 {
@@ -19,17 +19,17 @@ Cell::Cell(ParticleGrid* particleGrid, int _x, int _y, ParticleType type)
     m_particleGrid = particleGrid;
     colorVariation = std::rand() % 5;
 }
-void Cell::setParticleType(ParticleType type)
+void Cell::setParticleState(ParticleState state)
 {
-    if (type != m_particleType)
+    if (state.type != m_particleState.type)
     {
-        m_particleType = type;
         markForRedraw();
     }
+    m_particleState = state;
 }
-ParticleType Cell::particleType() const
+ParticleState Cell::particleState() const
 {
-    return m_particleType;
+    return m_particleState;
 }
 void Cell::setSelected(bool selected)
 {
@@ -121,7 +121,7 @@ void ParticleGrid::draw()
     for (Cell* cell : m_redrawCells)
     {
         Uint32 cellColor;
-        switch (cell->m_particleType)
+        switch (cell->particleState().type)
         {
         default:
             cellColor = 0xFF00FFFF;
@@ -189,6 +189,13 @@ void ParticleGrid::draw()
             break;
         }
 
+        case ParticleType::Steam:
+        {
+            Uint32 choices[] = { 0xFFFFFF22, 0xF5F5F522, 0xEEEEEE22, 0xE0E0E022, 0xDCDCDC22 };
+            cellColor = choices[cell->colorVariation];
+            break;
+        }
+
         }
 
         // Add brush overlay
@@ -216,7 +223,7 @@ void ParticleGrid::clear(ParticleType type)
     {
         for (Cell& cell : row)
         {
-            cell.setParticleType(type);
+            cell.setParticleState(defaultParticleState(type));
         }
     }
 }
@@ -230,7 +237,7 @@ void ParticleGrid::updateCell(int x, int y)
     }
 
     ParticleUpdate update = { .nextCell = nullptr, .mode = ParticleUpdate::NOOP };
-    switch (cell->m_particleType)
+    switch (cell->particleState().type)
     {
     case ParticleType::Rainbow:
     case ParticleType::Pink:
@@ -251,6 +258,10 @@ void ParticleGrid::updateCell(int x, int y)
         update = particleUpdateFunc_Solid(this, x, y);
         break;
 
+    case ParticleType::Steam:
+        update = particleUpdateFunc_Gas(this, x, y);
+        break;
+
     default:
         break;
 
@@ -259,15 +270,15 @@ void ParticleGrid::updateCell(int x, int y)
     switch (update.mode)
     {
     case ParticleUpdate::Move:
-        update.nextCell->setParticleType(cell->particleType());
-        cell->setParticleType(ParticleType::Air);
+        update.nextCell->setParticleState(cell->particleState());
+        cell->setParticleState({ .type = ParticleType::Air, .life = 0 });
         break;
 
     case ParticleUpdate::Swap:
     {
-        ParticleType tmp = cell->particleType();
-        cell->setParticleType(update.nextCell->particleType());
-        update.nextCell->setParticleType(tmp);
+        ParticleState tmp = cell->particleState();
+        cell->setParticleState(update.nextCell->particleState());
+        update.nextCell->setParticleState(tmp);
         break;
     }
 

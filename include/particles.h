@@ -10,7 +10,8 @@
     X(Rainbow) \
     X(Pink) \
     X(Blue) \
-    X(Water) 
+    X(Water) \
+    X(Steam)
 
 enum class ParticleType
 {
@@ -25,3 +26,21 @@ static const char* ParticleTypeNames[] =
     PARTICLE_TYPE_LIST
 #undef X
 };
+
+struct ParticleState
+{
+    ParticleType type;
+    int life;
+};
+constexpr ParticleState defaultParticleState(ParticleType type)
+{
+    switch (type)
+    {
+    case ParticleType::Steam:
+        return { .type = ParticleType::Steam, .life = 100 };
+
+    default:
+        return { .type = type, .life = 0 };
+
+    }
+}

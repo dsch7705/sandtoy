@@ -1,6 +1,7 @@
 #pragma once
 
 #include <SDL3/SDL_rect.h>
+#include <iostream>
 #include <vector>
 #include <cstdlib>
 
@@ -16,13 +17,13 @@ class Brush;
 //////////////////////////
 struct Cell
 {
-    Cell(ParticleGrid* particleGrid, int _x, int _y, ParticleType type = ParticleType::Air);
+    Cell(ParticleGrid* particleGrid, int _x, int _y, ParticleState particleState = defaultParticleState(ParticleType::Air));
 
     const int x, y;
     char colorVariation;
     
-    void setParticleType(ParticleType type);
-    ParticleType particleType() const;
+    void setParticleState(ParticleState state);
+    ParticleState particleState() const;
 
     void setSelected(bool selected);
     bool selected() const;
@@ -31,7 +32,8 @@ struct Cell
 
 private:
     ParticleGrid* m_particleGrid;
-    ParticleType m_particleType;
+    ParticleState m_particleState;
+    //ParticleType m_particleType;
 
     bool m_needsRedraw;
     bool m_isSelected;
@@ -83,13 +85,14 @@ struct ParticleUpdate
         NOOP
     } mode;
 };
+constexpr ParticleUpdate doNothing { .nextCell = nullptr, .mode = ParticleUpdate::NOOP };
 
 inline ParticleUpdate particleUpdateFunc_Standard(ParticleGrid* particleGrid, int x, int y)
 {
     Cell* cell = particleGrid->getCell(x, y);
     if (cell == nullptr)
     {
-        return { .nextCell = nullptr, .mode = ParticleUpdate::NOOP };
+        return doNothing;
     }
 
     Cell* cellNext = nullptr;
@@ -99,7 +102,7 @@ inline ParticleUpdate particleUpdateFunc_Standard(ParticleGrid* particleGrid, in
         if (cellNext) \
         { \
             int rand = std::rand(); \
-            switch (cellNext->particleType()) \
+            switch (cellNext->particleState().type) \
             { \
             case ParticleType::Air: \
                 if (rand % 15 == 0) { break; } \
@@ -130,18 +133,18 @@ inline ParticleUpdate particleUpdateFunc_Standard(ParticleGrid* particleGrid, in
 
     #undef TRY_UPDATE
 
-    return { .nextCell = nullptr, .mode = ParticleUpdate::NOOP };
+    return doNothing;
 }
 inline ParticleUpdate particleUpdateFunc_Solid(ParticleGrid* particleGrid, int x, int y)
 {
-    return { .nextCell = nullptr, .mode = ParticleUpdate::NOOP };
+    return doNothing;
 }
 inline ParticleUpdate particleUpdateFunc_Fluid(ParticleGrid* particleGrid, int x, int y)
 {
     Cell* cell = particleGrid->getCell(x, y);
     if (cell == nullptr)
     {
-        return { .nextCell = nullptr, .mode = ParticleUpdate::NOOP };
+        return doNothing;
     }
 
     Cell* cellNext = nullptr;
@@ -151,7 +154,7 @@ inline ParticleUpdate particleUpdateFunc_Fluid(ParticleGrid* particleGrid, int x
         if (cellNext) \
         { \
             int rand = std::rand(); \
-            switch (cellNext->particleType()) \
+            switch (cellNext->particleState().type) \
             { \
             case ParticleType::Air: \
                 if (rand % 30 == 0) { break; } \
@@ -183,6 +186,68 @@ inline ParticleUpdate particleUpdateFunc_Fluid(ParticleGrid* particleGrid, int x
     TRY_UPDATE();
 
     #undef TRY_UPDATE
+
+    return doNothing;
+}
+inline ParticleUpdate particleUpdateFunc_Gas(ParticleGrid* particleGrid, int x, int y)
+{
+    Cell* cell = particleGrid->getCell(x, y);
+    if (cell == nullptr)
+    {
+        return { .nextCell = nullptr, .mode = ParticleUpdate::NOOP };
+    }
+
+    Cell* cellNext = nullptr;
+
+    int rand = std::rand();
+    if (rand % 50 == 0)
+    {
+        ParticleState nextState = cell->particleState();
+        if (--nextState.life == 0)
+        {
+            cell->setParticleState(defaultParticleState(ParticleType::Water));
+            return doNothing;
+        }
+        cell->setParticleState(nextState);
+    }
+
+    switch (rand % 5)
+    {
+    case 0:
+        cellNext = particleGrid->getCell(x, y - 1);
+        break;
+    
+    case 1:
+        cellNext = particleGrid->getCell(x - 1, y - 1);
+        break;
+
+    case 2:
+        cellNext = particleGrid->getCell(x + 1, y - 1);
+        break;
+
+    case 3:
+        cellNext = particleGrid->getCell(x - 1, y);
+        break;
+
+    case 4:
+        cellNext = particleGrid->getCell(x + 1, y);
+        break;
+
+    default:
+        cellNext = nullptr;
+        break;
+
+    }
+
+    if (!cellNext)
+    {
+        return { .nextCell = nullptr, .mode = ParticleUpdate::NOOP };
+    }
+
+    if (cellNext->particleState().type == ParticleType::Air)
+    {
+        return { .nextCell = cellNext, .mode = ParticleUpdate::Move };
+    }
 
     return { .nextCell = nullptr, .mode = ParticleUpdate::NOOP };
 }
