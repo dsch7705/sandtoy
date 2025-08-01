@@ -10,6 +10,7 @@
 
 #include "particle_grid.h"
 #include "brush.h"
+#include "util.h"
 
 #include "imgui.h"
 #include "imgui_impl_sdl3.h"
@@ -17,15 +18,15 @@
 
 
 // Constants //
-constexpr int kCellScale { 6 };
-constexpr int kGridWidth { 256 };
-constexpr int kGridHeight { 128 };
+static constexpr int kCellScale { 6 };
+static constexpr int kGridWidth { 256 };
+static constexpr int kGridHeight { 128 };
 
-constexpr int kScreenWidth { kGridWidth * kCellScale };
-constexpr int kScreenHeight { kGridHeight * kCellScale };
+static constexpr int kScreenWidth { kGridWidth * kCellScale };
+static constexpr int kScreenHeight { kGridHeight * kCellScale };
 
-constexpr int kFrameCap { 240 };
-constexpr double kFrameDuration { kFrameCap ? 1. / kFrameCap : -1 };
+static constexpr int kFrameCap { 0 };
+static constexpr double kFrameDuration { kFrameCap ? 1. / kFrameCap : -1 };
 ///////////////
 
 static SDL_Window* window;
@@ -38,7 +39,8 @@ static ParticleGrid* grid;
 static Brush* brush;
 static ImGuiIO* guiIO;
 
-static float guiBrushRadius;
+static int guiBrushRadius;
+static float guiBrushRotation;
 static bool guiShowBrushHighlight;
 static bool guiShowControls { false };
 static bool guiShowFPS { true };
@@ -103,7 +105,7 @@ static void mainloop()
     ///////////////////
 
     // Update //
-    brush->stroke();
+    brush->update();
     grid->update();
     ////////////
 
@@ -123,15 +125,30 @@ static void mainloop()
             if (ImGui::Selectable(ParticleTypeNames[i]))
             {
                 brush->setParticleType(static_cast<ParticleType>(i));
-                //brush.particleType = static_cast<ParticleType>(i);
+            }
+        }
+        ImGui::EndCombo();
+    }
+    if (ImGui::BeginCombo("Brush type", BrushTypeNames[static_cast<int>(brush->brushType())]))
+    {
+        for (int i = 0; i < static_cast<int>(BrushType::COUNT); ++i)
+        {
+            if (ImGui::Selectable(BrushTypeNames[i]))
+            {
+                brush->setBrushType(static_cast<BrushType>(i));
             }
         }
         ImGui::EndCombo();
     }
     guiBrushRadius = brush->radius();
-    if (ImGui::SliderFloat("Brush radius", &guiBrushRadius, Brush::kMinRadius, Brush::kMaxRadius, "%.1f"))
+    if (ImGui::SliderInt("Brush radius", &guiBrushRadius, Brush::kMinRadius, Brush::kMaxRadius))
     {
         brush->setRadius(guiBrushRadius);
+    }
+    guiBrushRotation = brush->rotation();
+    if (ImGui::SliderFloat("Brush rotation", &guiBrushRotation, 0.f, 2.f * Util::PI, "%.3f"))
+    {
+        brush->setRotation(guiBrushRotation);
     }
 
     ImGui::Separator();
@@ -172,6 +189,7 @@ static void mainloop()
             CTRL_TABLE_ENTRY("Draw (primary)", "Left Click");
             CTRL_TABLE_ENTRY("Draw (secondary)", "Right Click");
             CTRL_TABLE_ENTRY("Resize brush", "Scroll");
+            CTRL_TABLE_ENTRY("Rotate brush", "Shift + Scroll");
             CTRL_TABLE_ENTRY("Cycle material", "Ctrl + Scroll");
             CTRL_TABLE_ENTRY("Fill", "F");
             CTRL_TABLE_ENTRY("Clear", "R");

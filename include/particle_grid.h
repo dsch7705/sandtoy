@@ -25,8 +25,10 @@ struct Cell
     void setParticleState(ParticleState state);
     ParticleState particleState() const;
 
-    void setSelected(bool selected);
-    bool selected() const;
+    void setBrushSelected(bool selected);
+    bool isBrushSelected() const;
+    void setBrushOutline(bool selected);
+    bool isBrushOutline() const;
 
     void markForRedraw();
 
@@ -36,7 +38,8 @@ private:
     //ParticleType m_particleType;
 
     bool m_needsRedraw;
-    bool m_isSelected;
+    bool m_isBrushSelected;
+    bool m_isBrushOutline;
     
     friend class ParticleGrid;
 

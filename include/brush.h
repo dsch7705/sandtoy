@@ -2,7 +2,26 @@
 
 #include <stack>
 #include <vector>
+#include <unordered_set>
 
+
+#define BRUSH_SHAPE_LIST \
+    X(Circle) \
+    X(Square)
+
+enum class BrushType
+{
+#define X(NAME) NAME,
+    BRUSH_SHAPE_LIST
+#undef X
+    COUNT
+};
+static constexpr const char* BrushTypeNames[] =
+{
+#define X(NAME) #NAME,
+    BRUSH_SHAPE_LIST
+#undef X
+};
 
 // Forward Declarations //
 union SDL_Event;
@@ -10,43 +29,64 @@ union SDL_Event;
 class Brush
 {
 public:
-    Brush(float radius, ParticleType particleType);
+    Brush(int radius, ParticleType particleType);
 
     void handleEvent(SDL_Event* event, bool isUiFocused);
-    void stroke();
+    void update();
+
+    void selectFill();
     void floodFill();
 
-    void setParticleType(ParticleType type);
-    ParticleType particleType() const;
-
     void setCanvas(ParticleGrid* canvas);
-    void setRadius(float radius);
-    float radius() const;
+
+    void setParticleType(ParticleType type);
+    void setBrushType(BrushType type);    
+    void setRadius(int radius);
+    void setRotation(float radians);
+    void setPos(int x, int y);
+    
+    ParticleType particleType() const;
+    BrushType brushType() const;
+    int radius() const;
+    float rotation() const;
 
     void toggleHighlight();
     bool highlight() const;
 
-    static constexpr float kMinRadius { 0.5f };
-    static constexpr float kMaxRadius { 100.f };
+    static constexpr int kMinRadius { 1 };
+    static constexpr int kMaxRadius { 20 };
     // Scales the rate at which the scroll wheel resizes the brush
-    static constexpr float kRadiusResizeScale { 0.5f };
+    static constexpr int kRadiusResizeScale { 1 };
+    static constexpr float kRotationScale { 0.1f };
 
 private:
     int m_x, m_y;
-    float m_radius;
+    int m_radius;
+    float m_rot;
     bool m_isDown;
     
     ParticleType m_particleType;
     ParticleType m_particleType2;
     ParticleGrid* m_canvas;
 
+    std::unordered_set<Cell*> m_selectedCells;
+
     // Stores canvas states when edits are made
     std::stack<std::vector<ParticleState>> m_canvasStateStack;
     void pushCanvasState();
     void popCanvasState();
 
-    std::vector<Cell*> m_selectedCells;
-    void updateSelectedCells();
+    // Outline of the brush
+    struct Shape
+    {
+        std::unordered_set<Cell*> outline;
+        int x, y;
+    };
+    Shape m_shape;
+    void setShapeCircle();
+    void setShapeSquare();
+
+    BrushType m_brushType;
 
     friend class ParticleGrid;
 

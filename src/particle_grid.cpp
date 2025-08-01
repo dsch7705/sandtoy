@@ -12,7 +12,7 @@ Cell::Cell(ParticleGrid* particleGrid, int _x, int _y, ParticleState particleSta
     : x(_x), y(_y)
     , m_particleState(particleState)
     , m_needsRedraw(false)
-    , m_isSelected(false)
+    , m_isBrushSelected(false)
 {
     if (particleGrid == nullptr)
     {
@@ -33,17 +33,29 @@ ParticleState Cell::particleState() const
 {
     return m_particleState;
 }
-void Cell::setSelected(bool selected)
+void Cell::setBrushSelected(bool selected)
 {
-    if (m_isSelected != selected)
+    if (m_isBrushSelected != selected)
     {
-        m_isSelected = selected;
+        m_isBrushSelected = selected;
         markForRedraw();
     }
 }
-bool Cell::selected() const
+bool Cell::isBrushSelected() const
 {
-    return m_isSelected;
+    return m_isBrushSelected;
+}
+void Cell::setBrushOutline(bool selected)
+{
+    if (m_isBrushOutline != selected)
+    {
+        m_isBrushOutline = selected;
+        markForRedraw();
+    }
+}
+bool Cell::isBrushOutline() const
+{
+    return m_isBrushOutline;
 }
 
 void Cell::markForRedraw()
@@ -190,10 +202,14 @@ void ParticleGrid::draw()
         }
 
         // Add brush overlay
-        if (m_showBrushHighlight && cell->selected())
+        if (m_showBrushHighlight && cell->isBrushSelected())
         {
             cellColor = Util::blendRGBA(cellColor, 0xFFFFFF22);
         }
+        //if (cell->isBrushOutline())
+        //{
+        //    cellColor = Util::blendRGBA(cellColor, 0x00FF0088);
+        //}
 
         pixelBuffer[cell->y * (pitch / sizeof(Uint32)) + cell->x] = cellColor;
         cell->m_needsRedraw = false;
