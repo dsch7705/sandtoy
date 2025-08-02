@@ -92,6 +92,13 @@ static void mainloop()
                     break;
                 }
 
+            case SDLK_T:
+                if (e.key.mod & SDL_KMOD_ALT)
+                {
+                    grid->toggleShowTemp();
+                    break;
+                }
+
             default:
                 break;
 
@@ -200,10 +207,13 @@ static void mainloop()
             CTRL_TABLE_ENTRY("Fill", "F");
             CTRL_TABLE_ENTRY("Clear", "R");
             CTRL_TABLE_ENTRY("Undo", "Ctrl + Z");
+            CTRL_TABLE_ENTRY("Heat", "Middle Click");
+            CTRL_TABLE_ENTRY("Cool", "Shift + Middle Click");
             
             CTRL_TABLE_SEPARATOR();
 
             CTRL_TABLE_ENTRY("Toggle Brush Highlight", "H");
+            CTRL_TABLE_ENTRY("Toggle Show Temp", "Alt + T");
             CTRL_TABLE_ENTRY("Toggle Show Controls", "Alt + C");
             CTRL_TABLE_ENTRY("Toggle Show FPS", "Alt + F");
 
