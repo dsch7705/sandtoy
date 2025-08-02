@@ -15,10 +15,12 @@ Brush::Brush(int radius, ParticleType particleType)
     , m_isDown(false)
     , m_isHeatDown(false)
     , m_radius(radius)
+    , m_rot(Util::PI)
     , m_brushType(BrushType::Circle)
     , m_particleType(particleType)
     , m_particleType2(ParticleType::Air)
     , m_canvas(nullptr)
+    , m_hoveredCell(nullptr)
 {
 
 }
@@ -129,6 +131,7 @@ void Brush::handleEvent(SDL_Event* event, bool isUiFocused)
         if (x != m_x || y != m_y)
         {
             setPos(x, y);
+            m_hoveredCell = m_canvas->getCell(x, y);
         }
         break;
     }
@@ -247,6 +250,10 @@ int Brush::radius() const
 float Brush::rotation() const
 {
     return m_rot;
+}
+Cell* Brush::hoveredCell() const
+{
+    return m_hoveredCell;
 }
 
 void Brush::toggleHighlight()
@@ -414,12 +421,11 @@ void Brush::update()
     
     if (m_isHeatDown)
     {
-        Cell* cell = m_canvas->getCell(m_x, m_y);
-        if (cell)
+        for (Cell* cell : m_selectedCells)
         {
-            CellState state = cell->cellState();
+            ParticleState state = cell->particleState();
             state.temperature = SDL_GetModState() & SDL_KMOD_SHIFT ? 0.f : 1000.f;
-            cell->setCellState(state);
+            cell->setParticleState(state);
         }
     }
 }

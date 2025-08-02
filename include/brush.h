@@ -50,6 +50,8 @@ public:
     int radius() const;
     float rotation() const;
 
+    Cell* hoveredCell() const;
+
     void toggleHighlight();
     bool highlight() const;
 
@@ -71,6 +73,7 @@ private:
     ParticleGrid* m_canvas;
 
     std::vector<Cell*> m_selectedCells;
+    Cell* m_hoveredCell;
 
     // Stores canvas states when edits are made
     struct CompoundState

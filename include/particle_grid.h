@@ -126,7 +126,7 @@ inline ParticleUpdate particleUpdateFunc_Solid(ParticleGrid* particleGrid, int x
             { \
             case ParticleType::Air: \
                 if (rand % 15 == 0) { break; } \
-                return { .nextCell = cellNext, .mode = ParticleUpdate::Move }; \
+                return { .nextCell = cellNext, .mode = ParticleUpdate::Swap }; \
                 break; \
             case ParticleType::Water: \
                 if (rand % 3 == 0) { break; } \

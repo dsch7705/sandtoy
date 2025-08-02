@@ -25,7 +25,7 @@ static constexpr int kGridHeight { 128 };
 static constexpr int kScreenWidth { kGridWidth * kCellScale };
 static constexpr int kScreenHeight { kGridHeight * kCellScale };
 
-static constexpr int kFrameCap { 240 };
+static constexpr int kFrameCap { 0 };
 static constexpr double kFrameDuration { kFrameCap ? 1. / kFrameCap : -1 };
 ///////////////
 
@@ -119,11 +119,11 @@ static void mainloop()
     ImGui::Begin("Sandbox", NULL, ImGuiWindowFlags_AlwaysAutoResize);
     ImGui::PushItemWidth(100.f);
 
-    if (ImGui::BeginCombo("Material", ParticleTypeNames[static_cast<int>(brush->particleType())]))
+    if (ImGui::BeginCombo("Material", kParticleTypeNames[static_cast<int>(brush->particleType())].c_str()))
     {
         for (int i = 0; i < static_cast<int>(ParticleType::COUNT); ++i)
         {
-            if (ImGui::Selectable(ParticleTypeNames[i]))
+            if (ImGui::Selectable(kParticleTypeNames[i].c_str()))
             {
                 brush->setParticleType(static_cast<ParticleType>(i));
             }
@@ -220,8 +220,15 @@ static void mainloop()
 
     ImGui::PopItemWidth();
     ImGui::End();
-
     //////////////////
+    // Debug //
+    ImGui::Begin("Debug", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+
+    ImGui::Text("Ambient temperature: %f", brush->hoveredCell() ? brush->hoveredCell()->cellState().temperature : 0.f);
+    ImGui::Text("Particle temperature: %f", brush->hoveredCell() ? brush->hoveredCell()->particleState().temperature : 0.f);
+
+    ImGui::End();
+    ///////////
     // Draw //
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);

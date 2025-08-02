@@ -30,7 +30,7 @@ void Cell::setParticleState(ParticleState state)
     {
         return;
     }
-    if (state.type != m_particleState.type)
+    if (state.type != m_particleState.type || state.temperature != m_particleState.temperature)
     {
         markForRedraw();
     }
@@ -235,7 +235,7 @@ void ParticleGrid::draw()
         //    cellColor = Util::blendRGBA(cellColor, 0x00FF0088);
         //}
         // Ambient temp colors
-        if (m_showTemperature) { cellColor = Util::blendRGBA(cellColor, Util::lerpColor(0x0000FF99, 0xFF000099, cell->cellState().temperature / 100.f)); }
+        if (m_showTemperature) { cellColor = Util::blendRGBA(cellColor, Util::lerpColor(0x0000FF99, 0xFF000099, cell->particleState().temperature / 100.f)); }
 
         pixelBuffer[cell->y * (pitch / sizeof(Uint32)) + cell->x] = cellColor;
         cell->m_needsRedraw = false;
@@ -257,59 +257,58 @@ void ParticleGrid::update()
     }
     
     // Ambient temperature
+    // Phase 1: accumulate deltas
     std::vector<float> accumulatedDelta(m_particles.size(), 0.f);
-    // Phase 1: calculate deltas from neighbors
+
+    // Only visit each neighbor pair once (right + down directions)
+    const std::pair<int, int> neighborOffsets[] = {
+        {1, 0}, {1, 1}, {0, 1}, {-1, 1}
+    };
+
     for (const auto& coord : m_coords)
     {
-        Cell* cell = getCell(coord.first, coord.second);
+        int x = coord.first;
+        int y = coord.second;
+        Cell* cell = getCell(x, y);
         if (!cell) continue;
 
-        CellState cellState = cell->cellState();
+        ParticleState a = cell->particleState();
+        int idxA = y * width + x;
 
-        std::vector<Cell*> neighbors;
-        auto tryPush = [&](int x, int y)
+        for (const auto& offset : neighborOffsets)
         {
-            Cell* c = getCell(x, y);
-            if (c)
-            {
-                neighbors.push_back(c);
-            }
-        };
-        tryPush(coord.first + 1, coord.second);
-        tryPush(coord.first + 1, coord.second + 1);
-        tryPush(coord.first, coord.second + 1);
-        tryPush(coord.first - 1, coord.second + 1);
-        tryPush(coord.first - 1, coord.second);
-        tryPush(coord.first - 1, coord.second - 1);
-        tryPush(coord.first, coord.second - 1);
-        tryPush(coord.first + 1, coord.second - 1);
+            int nx = x + offset.first;
+            int ny = y + offset.second;
+            Cell* neighbor = getCell(nx, ny);
+            if (!neighbor) continue;
 
-        for (Cell* neighbor : neighbors)
-        {
-            CellState neighborState = neighbor->cellState();
+            ParticleState b = neighbor->particleState();
+            int idxB = ny * width + nx;
 
-            float delta = (neighborState.temperature - cellState.temperature) * 0.05f;
+            float tempDiff = b.temperature - a.temperature;
+            float delta = tempDiff * 0.05f; // could include conductivity scaling here
 
-            accumulatedDelta[cell->y * width + cell->x] += delta;
-            accumulatedDelta[neighbor->y * width + neighbor->x] -= delta;
+            accumulatedDelta[idxA] += delta;
+            accumulatedDelta[idxB] -= delta;
         }
     }
 
-    // Phase 2: apply accumulated deltas
+    // Phase 2: apply delta to each particle’s tempDelta
     for (int i = 0; i < (int)m_particles.size(); ++i)
     {
-        CellState state = m_particles[i].cellState();
+        auto& cell = m_particles[i]; // assume these are actual particles, not empty cells
+        auto state = cell.particleState(); // this better return by reference or setter must update
         state.temperatureDelta += accumulatedDelta[i];
-        m_particles[i].setCellState(state);
+        cell.setParticleState(state); // make sure this is updating the actual sim state
     }
 
-    // Phase 3: update temperatures and reset deltas
+    // Phase 3: finalize temps and reset deltas
     for (Cell& cell : m_particles)
     {
-        CellState state = cell.cellState();
+        auto state = cell.particleState();
         state.temperature += state.temperatureDelta;
         state.temperatureDelta = 0.f;
-        cell.setCellState(state);
+        cell.setParticleState(state);
     }
 }
 void ParticleGrid::clear(ParticleType type)
@@ -342,7 +341,7 @@ void ParticleGrid::updateCell(int x, int y)
 
     // Positioning
     ParticleUpdate update = { .nextCell = nullptr, .mode = ParticleUpdate::NOOP };
-    switch (ParticlePhases[(int)(cell->particleState().type)])
+    switch (kParticleProperties.at(cell->particleState().type).phase)
     {
     case ParticlePhase::Solid:
         update = particleUpdateFunc_Solid(this, x, y);
