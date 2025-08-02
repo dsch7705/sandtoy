@@ -286,7 +286,7 @@ void ParticleGrid::update()
             int idxB = ny * width + nx;
 
             float tempDiff = b.temperature - a.temperature;
-            float delta = tempDiff * 0.05f; // could include conductivity scaling here
+            float delta = tempDiff * 0.05f; 
 
             accumulatedDelta[idxA] += delta;
             accumulatedDelta[idxB] -= delta;
@@ -296,16 +296,16 @@ void ParticleGrid::update()
     // Phase 2: apply delta to each particle’s tempDelta
     for (int i = 0; i < (int)m_particles.size(); ++i)
     {
-        auto& cell = m_particles[i]; // assume these are actual particles, not empty cells
-        auto state = cell.particleState(); // this better return by reference or setter must update
+        Cell& cell = m_particles[i]; 
+        ParticleState state = cell.particleState(); 
         state.temperatureDelta += accumulatedDelta[i];
-        cell.setParticleState(state); // make sure this is updating the actual sim state
+        cell.setParticleState(state); 
     }
 
     // Phase 3: finalize temps and reset deltas
     for (Cell& cell : m_particles)
     {
-        auto state = cell.particleState();
+        ParticleState state = cell.particleState();
         state.temperature += state.temperatureDelta;
         state.temperatureDelta = 0.f;
         cell.setParticleState(state);

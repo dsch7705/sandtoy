@@ -42,8 +42,12 @@ struct ParticleProperties
     ParticlePhase phase;
     float specificHeat;
     float thermalConductivity;
+    float meltingPoint;
+    float boilingPoint;
+    float latentHeatFusion;
+    float latentHeatVaporization;
 };
-static constexpr ParticleProperties kSandProperties { .phase = ParticlePhase::Solid, .specificHeat = .830f, .thermalConductivity = 0.25f };
+static constexpr ParticleProperties kSandProperties  { .phase = ParticlePhase::Solid, .specificHeat = .830f, .thermalConductivity = 0.25f };
 static constexpr ParticleProperties kStoneProperties { .phase = ParticlePhase::Static, .specificHeat = .880f, .thermalConductivity = 2.3f };
 static constexpr ParticleProperties kWaterProperties { .phase = ParticlePhase::Liquid, .specificHeat = 4.186f, .thermalConductivity = 0.6f };
 
@@ -67,11 +71,8 @@ struct ParticleState
 
     float temperature;
     float temperatureDelta;
+    float latentHeatStored;
     
-    float heatStored;
-    float specificHeat;
-    float thermalConductivity;
-
     bool operator==(const ParticleState& other) const
     {
         return (type == other.type && temperature == other.temperature && temperatureDelta == other.temperatureDelta);

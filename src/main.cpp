@@ -224,7 +224,6 @@ static void mainloop()
     // Debug //
     ImGui::Begin("Debug", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
 
-    ImGui::Text("Ambient temperature: %f", brush->hoveredCell() ? brush->hoveredCell()->cellState().temperature : 0.f);
     ImGui::Text("Particle temperature: %f", brush->hoveredCell() ? brush->hoveredCell()->particleState().temperature : 0.f);
 
     ImGui::End();
