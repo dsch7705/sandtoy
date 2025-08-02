@@ -70,6 +70,9 @@ struct ParticleGrid
     void update();
     void clear(ParticleType type = ParticleType::Air);
 
+    void toggleShowTemp();
+    bool showTemp() const;
+
 private:
     std::vector<Cell> m_particles;
     std::vector<std::pair<int, int>> m_coords;
@@ -80,6 +83,7 @@ private:
     SDL_FRect m_rendererRect;
 
     bool m_showBrushHighlight { true };
+    bool m_showTemperature { false };
 
     void updateCell(int x, int y);
     void update_b2t();

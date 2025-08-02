@@ -235,7 +235,7 @@ void ParticleGrid::draw()
         //    cellColor = Util::blendRGBA(cellColor, 0x00FF0088);
         //}
         // Ambient temp colors
-        cellColor = Util::blendRGBA(cellColor, Util::lerpColor(0x0000FF99, 0xFF000099, cell->cellState().temperature / 100.f));
+        if (m_showTemperature) { cellColor = Util::blendRGBA(cellColor, Util::lerpColor(0x0000FF99, 0xFF000099, cell->cellState().temperature / 100.f)); }
 
         pixelBuffer[cell->y * (pitch / sizeof(Uint32)) + cell->x] = cellColor;
         cell->m_needsRedraw = false;
@@ -256,8 +256,8 @@ void ParticleGrid::update()
         updateCell(coord.first, coord.second);
     }
     
+    // Ambient temperature
     std::vector<float> accumulatedDelta(m_particles.size(), 0.f);
-
     // Phase 1: calculate deltas from neighbors
     for (const auto& coord : m_coords)
     {
@@ -288,7 +288,7 @@ void ParticleGrid::update()
         {
             CellState neighborState = neighbor->cellState();
 
-            float delta = (neighborState.temperature - cellState.temperature) * 0.01f;
+            float delta = (neighborState.temperature - cellState.temperature) * 0.05f;
 
             accumulatedDelta[cell->y * width + cell->x] += delta;
             accumulatedDelta[neighbor->y * width + neighbor->x] -= delta;
@@ -311,8 +311,6 @@ void ParticleGrid::update()
         state.temperatureDelta = 0.f;
         cell.setCellState(state);
     }
-
-    //update_b2t();
 }
 void ParticleGrid::clear(ParticleType type)
 {
@@ -320,6 +318,18 @@ void ParticleGrid::clear(ParticleType type)
     {
         cell.setParticleState(defaultParticleState(type));
     }
+}
+void ParticleGrid::toggleShowTemp()
+{
+    m_showTemperature = !m_showTemperature;
+    for (Cell& cell : m_particles)
+    {
+        cell.markForRedraw();
+    }
+}
+bool ParticleGrid::showTemp() const
+{
+    return m_showTemperature;
 }
 
 void ParticleGrid::updateCell(int x, int y)

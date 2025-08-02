@@ -13,6 +13,7 @@ Brush::Brush(int radius, ParticleType particleType)
     : m_x(0)
     , m_y(0)
     , m_isDown(false)
+    , m_isHeatDown(false)
     , m_radius(radius)
     , m_brushType(BrushType::Circle)
     , m_particleType(particleType)
@@ -39,12 +40,9 @@ void Brush::handleEvent(SDL_Event* event, bool isUiFocused)
 
         case 2:
         {
-            Cell* cell = m_canvas->getCell(m_x, m_y);
-            if (cell)
+            if (!isUiFocused)
             {
-                CellState state = cell->cellState();
-                state.temperature = 500.f;
-                cell->setCellState(state);
+                m_isHeatDown = true;
             }
             break;
         }
@@ -75,6 +73,10 @@ void Brush::handleEvent(SDL_Event* event, bool isUiFocused)
             m_isDown = false;
             break;
 
+        case 2:
+            m_isHeatDown = false;
+            break;
+        
         case 3:
         {
             ParticleType tmp = m_particleType;
@@ -407,6 +409,17 @@ void Brush::update()
         for (Cell* cell : m_selectedCells)
         {
             cell->setParticleState(defaultParticleState(m_particleType));
+        }
+    }
+    
+    if (m_isHeatDown)
+    {
+        Cell* cell = m_canvas->getCell(m_x, m_y);
+        if (cell)
+        {
+            CellState state = cell->cellState();
+            state.temperature = SDL_GetModState() & SDL_KMOD_SHIFT ? 0.f : 1000.f;
+            cell->setCellState(state);
         }
     }
 }

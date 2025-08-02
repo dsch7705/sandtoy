@@ -42,6 +42,7 @@ static ImGuiIO* guiIO;
 static int guiBrushRadius;
 static float guiBrushRotation;
 static bool guiShowBrushHighlight;
+static bool guiShowTemperature;
 static bool guiShowControls { false };
 static bool guiShowFPS { true };
 
@@ -157,6 +158,11 @@ static void mainloop()
     if (ImGui::Checkbox("Show brush highlight", &guiShowBrushHighlight))
     {
         brush->toggleHighlight();
+    }
+    guiShowTemperature = grid->showTemp();
+    if (ImGui::Checkbox("Show temperature", &guiShowTemperature))
+    {
+        grid->toggleShowTemp();
     }
     ImGui::Checkbox("Show controls", &guiShowControls);
     ImGui::Checkbox("Show FPS", &guiShowFPS);

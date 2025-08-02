@@ -64,6 +64,7 @@ private:
     int m_radius;
     float m_rot;
     bool m_isDown;
+    bool m_isHeatDown;
     
     ParticleType m_particleType;
     ParticleType m_particleType2;
