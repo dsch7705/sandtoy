@@ -43,19 +43,24 @@ static constexpr ParticlePhase ParticlePhases[] =
 struct ParticleState
 {
     ParticleType type;
-    int life;
+    float temperature;
 
     ParticlePhase phase() const;
+
+    bool operator==(const ParticleState& other) const
+    {
+        return (type == other.type && temperature == other.temperature);
+    }
 };
 constexpr ParticleState defaultParticleState(ParticleType type)
 {
     switch (type)
     {
     case ParticleType::Steam:
-        return { .type = ParticleType::Steam, .life = 100 };
+        return { .type = ParticleType::Steam, .temperature = 100 };
 
     default:
-        return { .type = type, .life = 0 };
+        return { .type = type, .temperature = 0 };
 
     }
 }

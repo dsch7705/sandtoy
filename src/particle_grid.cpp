@@ -8,11 +8,14 @@
 #include <random>
 
 
+static constexpr CellState kDefaultCellState { .temperature = 0, .temperatureDelta = 0};
+
 Cell::Cell(ParticleGrid* particleGrid, int _x, int _y, ParticleState particleState) 
     : x(_x), y(_y)
     , m_particleState(particleState)
     , m_needsRedraw(false)
     , m_isBrushSelected(false)
+    , m_cellState(kDefaultCellState)
 {
     if (particleGrid == nullptr)
     {
@@ -23,6 +26,10 @@ Cell::Cell(ParticleGrid* particleGrid, int _x, int _y, ParticleState particleSta
 }
 void Cell::setParticleState(ParticleState state)
 {
+    if (state == m_particleState)
+    {
+        return;
+    }
     if (state.type != m_particleState.type)
     {
         markForRedraw();
@@ -33,6 +40,23 @@ ParticleState Cell::particleState() const
 {
     return m_particleState;
 }
+void Cell::setCellState(CellState state)
+{
+    if (state == m_cellState)
+    {
+        return;
+    }
+    if (state.temperature != m_cellState.temperature)
+    {
+        markForRedraw();
+    }
+    m_cellState = state;
+}
+CellState Cell::cellState() const
+{
+    return m_cellState;
+}
+
 void Cell::setBrushSelected(bool selected)
 {
     if (m_isBrushSelected != selected)
@@ -210,6 +234,8 @@ void ParticleGrid::draw()
         //{
         //    cellColor = Util::blendRGBA(cellColor, 0x00FF0088);
         //}
+        // Ambient temp colors
+        cellColor = Util::blendRGBA(cellColor, Util::lerpColor(0x0000FF99, 0xFF000099, cell->cellState().temperature / 100.f));
 
         pixelBuffer[cell->y * (pitch / sizeof(Uint32)) + cell->x] = cellColor;
         cell->m_needsRedraw = false;
@@ -229,6 +255,63 @@ void ParticleGrid::update()
     {
         updateCell(coord.first, coord.second);
     }
+    
+    std::vector<float> accumulatedDelta(m_particles.size(), 0.f);
+
+    // Phase 1: calculate deltas from neighbors
+    for (const auto& coord : m_coords)
+    {
+        Cell* cell = getCell(coord.first, coord.second);
+        if (!cell) continue;
+
+        CellState cellState = cell->cellState();
+
+        std::vector<Cell*> neighbors;
+        auto tryPush = [&](int x, int y)
+        {
+            Cell* c = getCell(x, y);
+            if (c)
+            {
+                neighbors.push_back(c);
+            }
+        };
+        tryPush(coord.first + 1, coord.second);
+        tryPush(coord.first + 1, coord.second + 1);
+        tryPush(coord.first, coord.second + 1);
+        tryPush(coord.first - 1, coord.second + 1);
+        tryPush(coord.first - 1, coord.second);
+        tryPush(coord.first - 1, coord.second - 1);
+        tryPush(coord.first, coord.second - 1);
+        tryPush(coord.first + 1, coord.second - 1);
+
+        for (Cell* neighbor : neighbors)
+        {
+            CellState neighborState = neighbor->cellState();
+
+            float delta = (neighborState.temperature - cellState.temperature) * 0.01f;
+
+            accumulatedDelta[cell->y * width + cell->x] += delta;
+            accumulatedDelta[neighbor->y * width + neighbor->x] -= delta;
+        }
+    }
+
+    // Phase 2: apply accumulated deltas
+    for (int i = 0; i < (int)m_particles.size(); ++i)
+    {
+        CellState state = m_particles[i].cellState();
+        state.temperatureDelta += accumulatedDelta[i];
+        m_particles[i].setCellState(state);
+    }
+
+    // Phase 3: update temperatures and reset deltas
+    for (Cell& cell : m_particles)
+    {
+        CellState state = cell.cellState();
+        state.temperature += state.temperatureDelta;
+        state.temperatureDelta = 0.f;
+        cell.setCellState(state);
+    }
+
     //update_b2t();
 }
 void ParticleGrid::clear(ParticleType type)
@@ -247,6 +330,7 @@ void ParticleGrid::updateCell(int x, int y)
         return;
     }
 
+    // Positioning
     ParticleUpdate update = { .nextCell = nullptr, .mode = ParticleUpdate::NOOP };
     switch (ParticlePhases[(int)(cell->particleState().type)])
     {
@@ -275,7 +359,7 @@ void ParticleGrid::updateCell(int x, int y)
     {
     case ParticleUpdate::Move:
         update.nextCell->setParticleState(cell->particleState());
-        cell->setParticleState({ .type = ParticleType::Air, .life = 0 });
+        cell->setParticleState({ .type = ParticleType::Air, .temperature = 0 });
         break;
 
     case ParticleUpdate::Swap:

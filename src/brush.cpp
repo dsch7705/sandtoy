@@ -37,6 +37,18 @@ void Brush::handleEvent(SDL_Event* event, bool isUiFocused)
             }
             break;
 
+        case 2:
+        {
+            Cell* cell = m_canvas->getCell(m_x, m_y);
+            if (cell)
+            {
+                CellState state = cell->cellState();
+                state.temperature = 500.f;
+                cell->setCellState(state);
+            }
+            break;
+        }
+
         case 3:
         {
             ParticleType tmp = m_particleType;
@@ -250,32 +262,34 @@ bool Brush::highlight() const
 
 void Brush::pushCanvasState()
 {
-    std::vector<ParticleState> state;
-    state.reserve(m_canvas->width * m_canvas->height);
+    std::vector<CompoundState> canvasState;
+    canvasState.reserve(m_canvas->width * m_canvas->height);
     for (const Cell& cell : m_canvas->m_particles)
     {
-        state.push_back(cell.particleState());
+        canvasState.emplace_back(cell.particleState(), cell.cellState());
     }
-    m_canvasStateStack.push(std::move(state));
+    m_canvasStateStack.push(std::move(canvasState));
 }
 void Brush::popCanvasState()
 {
     if (m_canvasStateStack.empty()) return;
 
     size_t canvasSize = m_canvas->width * m_canvas->height;
-    std::vector<ParticleState>& state = m_canvasStateStack.top();
-    if (state.size() == canvasSize)
+    std::vector<CompoundState>& canvasState = m_canvasStateStack.top();
+    if (canvasState.size() == canvasSize)
     {
         int i = 0;
         for (Cell& cell : m_canvas->m_particles)
         {
-            cell.setParticleState(state[i]);
+            CompoundState compoundState = canvasState[i];
+            cell.setParticleState(compoundState.particleState);
+            cell.setCellState(compoundState.cellState);
             ++i;
         }
     }
     else
     {
-        std::cerr << __func__ << ": Canvas state size (" << state.size() << ") does not match current canvas size (" << canvasSize << " [" << m_canvas->width << "x" << m_canvas->height << "]); discarding\n";
+        std::cerr << __func__ << ": Canvas state size (" << canvasState.size() << ") does not match current canvas size (" << canvasSize << " [" << m_canvas->width << "x" << m_canvas->height << "]); discarding\n";
     }
     m_canvasStateStack.pop();
 }
@@ -421,7 +435,7 @@ void Brush::selectFill()
         if (visited.contains(cell) || cell->isBrushOutline()) continue;
 
         cell->setBrushSelected(true);
-        m_selectedCells.insert(cell);
+        m_selectedCells.push_back(cell);
         visited.insert(cell);
 
         auto tryPush = [&](int x, int y) {

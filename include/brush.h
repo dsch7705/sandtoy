@@ -69,10 +69,15 @@ private:
     ParticleType m_particleType2;
     ParticleGrid* m_canvas;
 
-    std::unordered_set<Cell*> m_selectedCells;
+    std::vector<Cell*> m_selectedCells;
 
     // Stores canvas states when edits are made
-    std::stack<std::vector<ParticleState>> m_canvasStateStack;
+    struct CompoundState
+    {
+        ParticleState particleState;
+        CellState cellState;
+    };
+    std::stack<std::vector<CompoundState>> m_canvasStateStack;
     void pushCanvasState();
     void popCanvasState();
 

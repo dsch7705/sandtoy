@@ -15,6 +15,16 @@ struct SDL_Texture;
 struct ParticleGrid;
 class Brush;
 //////////////////////////
+struct CellState
+{
+    float temperature;
+    float temperatureDelta;
+
+    bool operator==(const CellState& other) const
+    {
+        return (temperature == other.temperature && temperatureDelta == other.temperatureDelta);
+    }
+};
 struct Cell
 {
     Cell(ParticleGrid* particleGrid, int _x, int _y, ParticleState particleState = defaultParticleState(ParticleType::Air));
@@ -24,6 +34,8 @@ struct Cell
     
     void setParticleState(ParticleState state);
     ParticleState particleState() const;
+    void setCellState(CellState state);
+    CellState cellState() const;
 
     void setBrushSelected(bool selected);
     bool isBrushSelected() const;
@@ -35,7 +47,7 @@ struct Cell
 private:
     ParticleGrid* m_particleGrid;
     ParticleState m_particleState;
-    //ParticleType m_particleType;
+    CellState m_cellState;
 
     bool m_needsRedraw;
     bool m_isBrushSelected;
@@ -203,7 +215,7 @@ inline ParticleUpdate particleUpdateFunc_Gas(ParticleGrid* particleGrid, int x, 
     if (rand % 50 == 0)
     {
         ParticleState nextState = cell->particleState();
-        if (--nextState.life <= 0)
+        if (--nextState.temperature <= 0)
         {
             cell->setParticleState(defaultParticleState(ParticleType::Water));
             return doNothing;
@@ -259,14 +271,14 @@ inline ParticleUpdate particleUpdateFunc_Gas(ParticleGrid* particleGrid, int x, 
     else if (cellNext->particleState().type == ParticleType::Water)
     {
         ParticleState newState = cell->particleState();
-        newState.life -= 30;
+        newState.temperature -= 30;
         cell->setParticleState(newState);
         return { .nextCell = cellNext, .mode = ParticleUpdate::Swap };
     }
     else if (cellNext->particleState().phase() == ParticlePhase::Solid)
     {
         ParticleState newState = cell->particleState();
-        newState.life -= 20;
+        newState.temperature -= 20;
         cell->setParticleState(newState);
         return { .nextCell = cellNext, .mode = ParticleUpdate::Swap };
     }
