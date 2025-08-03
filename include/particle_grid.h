@@ -115,6 +115,14 @@ inline ParticleUpdate particleUpdateFunc_Solid(ParticleGrid* particleGrid, int x
         return doNothing;
     }
 
+    ParticleState particleState = cell->particleState();
+    if (!kParticleProperties.contains(particleState.type))
+    {
+        throw errParticlePropertiesNotFound(particleState.type);
+    }
+    const ParticleProperties& props = kParticleProperties.at(particleState.type);
+    if (!props.affectedByGravity) { return doNothing; }
+
     Cell* cellNext = nullptr;
 
     #define TRY_UPDATE() \
@@ -174,7 +182,7 @@ inline ParticleUpdate particleUpdateFunc_Liquid(ParticleGrid* particleGrid, int 
             { \
             case ParticleType::Air: \
                 if (rand % 30 == 0) { break; } \
-                return { .nextCell = cellNext, .mode = ParticleUpdate::Move }; \
+                return { .nextCell = cellNext, .mode = ParticleUpdate::Swap }; \
                 break; \
             default: \
                 break; \
@@ -216,17 +224,6 @@ inline ParticleUpdate particleUpdateFunc_Gas(ParticleGrid* particleGrid, int x, 
     Cell* cellNext = nullptr;
 
     int rand = std::rand();
-    if (rand % 50 == 0)
-    {
-        ParticleState nextState = cell->particleState();
-        if (--nextState.temperature <= 0)
-        {
-            cell->setParticleState(defaultParticleState(ParticleType::Water));
-            return doNothing;
-        }
-        cell->setParticleState(nextState);
-    }
-
     switch (rand % 7)
     {
     case 0:
@@ -251,10 +248,18 @@ inline ParticleUpdate particleUpdateFunc_Gas(ParticleGrid* particleGrid, int x, 
 
     case 5:
         cellNext = particleGrid->getCell(x - 1, y + 1);
+        if (cellNext && cellNext->particleState().phase == ParticlePhase::Liquid)
+        {
+            cellNext = nullptr;
+        }
         break;
 
     case 6:
         cellNext = particleGrid->getCell(x + 1, y + 1);
+        if (cellNext && cellNext->particleState().phase == ParticlePhase::Liquid)
+        {
+            cellNext = nullptr;
+        }
         break;
 
     default:
@@ -268,24 +273,24 @@ inline ParticleUpdate particleUpdateFunc_Gas(ParticleGrid* particleGrid, int x, 
         return { .nextCell = nullptr, .mode = ParticleUpdate::NOOP };
     }
 
-    if (cellNext->particleState().type == ParticleType::Air)
+    if (cellNext->particleState().phase == ParticlePhase::Gas || cellNext->particleState().phase == ParticlePhase::Liquid)
     {
-        return { .nextCell = cellNext, .mode = ParticleUpdate::Move };
-    }
-    else if (cellNext->particleState().type == ParticleType::Water)
-    {
-        ParticleState newState = cell->particleState();
-        newState.temperature -= 30;
-        cell->setParticleState(newState);
         return { .nextCell = cellNext, .mode = ParticleUpdate::Swap };
     }
-    else if (cellNext->particleState().phase() == ParticlePhase::Solid)
-    {
-        ParticleState newState = cell->particleState();
-        newState.temperature -= 20;
-        cell->setParticleState(newState);
-        return { .nextCell = cellNext, .mode = ParticleUpdate::Swap };
-    }
+    //else if (cellNext->particleState().type == ParticleType::Water)
+    //{
+    //    ParticleState newState = cell->particleState();
+    //    newState.temperature -= 30;
+    //    cell->setParticleState(newState);
+    //    return { .nextCell = cellNext, .mode = ParticleUpdate::Swap };
+    //}
+    //else if (cellNext->particleState().phase() == ParticlePhase::Solid)
+    //{
+    //    ParticleState newState = cell->particleState();
+    //    newState.temperature -= 20;
+    //    cell->setParticleState(newState);
+    //    return { .nextCell = cellNext, .mode = ParticleUpdate::Swap };
+    //}
 
     return { .nextCell = nullptr, .mode = ParticleUpdate::NOOP };
 }

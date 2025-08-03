@@ -2,14 +2,26 @@
 
 #include <unordered_map>
 #include <string>
+#include <stdexcept>
 
+
+#define PARTICLE_PHASE_LIST \
+    X(Solid) \
+    X(Liquid) \
+    X(Gas) \
+    X(Static)
 
 enum class ParticlePhase
 {
-    Solid,
-    Liquid,
-    Gas,
-    Static
+#define X(NAME) NAME,
+    PARTICLE_PHASE_LIST
+#undef X
+};
+static constexpr std::string kParticlePhaseNames[] = 
+{
+#define X(NAME) #NAME,
+    PARTICLE_PHASE_LIST
+#undef X
 };
 #define PARTICLE_LIST \
     X(Sand) \
@@ -20,8 +32,7 @@ enum class ParticlePhase
     X(Blue) \
     X(Pink) \
     X(Rainbow) \
-    X(Air) \
-    X(Steam)
+    X(Air) 
 
 enum class ParticleType
 {
@@ -39,17 +50,49 @@ static constexpr std::string kParticleTypeNames[] =
 
 struct ParticleProperties
 {
-    ParticlePhase phase;
     float specificHeat;
     float thermalConductivity;
     float meltingPoint;
     float boilingPoint;
     float latentHeatFusion;
     float latentHeatVaporization;
+
+    bool affectedByGravity { true };
 };
-static constexpr ParticleProperties kSandProperties  { .phase = ParticlePhase::Solid, .specificHeat = .830f, .thermalConductivity = 0.25f };
-static constexpr ParticleProperties kStoneProperties { .phase = ParticlePhase::Static, .specificHeat = .880f, .thermalConductivity = 2.3f };
-static constexpr ParticleProperties kWaterProperties { .phase = ParticlePhase::Liquid, .specificHeat = 4.186f, .thermalConductivity = 0.6f };
+static constexpr ParticleProperties kSandProperties  {
+    .specificHeat = 0.20f,             
+    .thermalConductivity = 0.00025f,    
+    .meltingPoint = 1700.f,
+    .boilingPoint = 2200.f,
+    .latentHeatFusion = 1.9f,          
+    .latentHeatVaporization = 4.5f     
+};
+static constexpr ParticleProperties kStoneProperties {
+    .specificHeat = 0.19f,             
+    .thermalConductivity = 0.0015f,     
+    .meltingPoint = 1260.f,
+    .boilingPoint = 2600.f,            
+    .latentHeatFusion = 1.5f,          
+    .latentHeatVaporization = 4.0f,    
+    .affectedByGravity = false
+};
+static constexpr ParticleProperties kWaterProperties {
+    .specificHeat = 1.00f,
+    .thermalConductivity = 0.0006f,
+    .meltingPoint = 0.f,
+    .boilingPoint = 100.f,
+    .latentHeatFusion = 0.33f,       
+    .latentHeatVaporization = 2.26f  
+};
+static constexpr ParticleProperties kAirProperties {
+    .specificHeat = 0.24f,             
+    .thermalConductivity = 0.00005f,    
+    .meltingPoint = -218.f,            
+    .boilingPoint = -194.f,            
+    .latentHeatFusion = 0.3f,
+    .latentHeatVaporization = 2.28f
+};
+static constexpr float kAmbientTemp { 22.f };
 
 static const std::unordered_map<ParticleType, ParticleProperties> kParticleProperties {
     { ParticleType::Sand, kSandProperties },
@@ -60,33 +103,49 @@ static const std::unordered_map<ParticleType, ParticleProperties> kParticlePrope
     { ParticleType::Blue, kSandProperties },
     { ParticleType::Pink, kSandProperties },
     { ParticleType::Rainbow, kSandProperties },
-    { ParticleType::Air, { .phase = ParticlePhase::Static, .specificHeat = 1.f, .thermalConductivity = 0.025f } },
-    { ParticleType::Steam, { .phase = ParticlePhase::Gas, .specificHeat = 2.f, .thermalConductivity = 0.6f } }
+    { ParticleType::Air, kAirProperties },
 };
+inline static const std::runtime_error errParticlePropertiesNotFound(ParticleType type)
+{
+    return std::runtime_error("No entry for ParticleType '" + kParticleTypeNames[static_cast<int>(type)] + "' " + "in kParticleProperties");
+}
 
 struct ParticleState
 {
     ParticleType type;
-    ParticlePhase phase() const;
+    ParticlePhase phase;
 
     float temperature;
     float temperatureDelta;
-    float latentHeatStored;
+    float latentHeatAbsorbed;
     
     bool operator==(const ParticleState& other) const
     {
         return (type == other.type && temperature == other.temperature && temperatureDelta == other.temperatureDelta);
     }
 };
-constexpr ParticleState defaultParticleState(ParticleType type)
+static ParticlePhase getInitialParticlePhase(ParticleType type)
 {
-    switch (type)
+    if (!kParticleProperties.contains(type))
     {
-    case ParticleType::Steam:
-        return { .type = ParticleType::Steam, .temperature = 100 };
-
-    default:
-        return { .type = type, .temperature = 0 };
-
+        throw errParticlePropertiesNotFound(type);
     }
+
+    const ParticleProperties& props = kParticleProperties.at(type);
+    if (kAmbientTemp < props.meltingPoint)
+    {
+        return ParticlePhase::Solid;
+    }
+    else if (kAmbientTemp >= props.meltingPoint && kAmbientTemp < props.boilingPoint)
+    {
+        return ParticlePhase::Liquid;
+    }
+    else
+    {
+        return ParticlePhase::Gas;
+    }
+}
+static constexpr ParticleState defaultParticleState(ParticleType type)
+{
+    return { .type = type, .phase = getInitialParticlePhase(type), .temperature = kAmbientTemp, .temperatureDelta = 0.f, .latentHeatAbsorbed = 0.f };
 }

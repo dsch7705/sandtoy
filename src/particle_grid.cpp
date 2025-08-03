@@ -216,13 +216,6 @@ void ParticleGrid::draw()
             break;
         }
 
-        case ParticleType::Steam:
-        {
-            Uint32 choices[] = { 0xFFFFFF22, 0xF5F5F522, 0xEEEEEE22, 0xE0E0E022, 0xDCDCDC22 };
-            cellColor = choices[cell->colorVariation];
-            break;
-        }
-
         }
 
         // Add brush overlay
@@ -260,7 +253,6 @@ void ParticleGrid::update()
     // Phase 1: accumulate deltas
     std::vector<float> accumulatedDelta(m_particles.size(), 0.f);
 
-    // Only visit each neighbor pair once (right + down directions)
     const std::pair<int, int> neighborOffsets[] = {
         {1, 0}, {1, 1}, {0, 1}, {-1, 1}
     };
@@ -279,17 +271,29 @@ void ParticleGrid::update()
         {
             int nx = x + offset.first;
             int ny = y + offset.second;
+
+            float tempDiff;
+            float delta;
+
             Cell* neighbor = getCell(nx, ny);
-            if (!neighbor) continue;
+            if (neighbor)
+            {
+                ParticleState b = neighbor->particleState();
+                int idxB = ny * width + nx;
+            
+                tempDiff = b.temperature - a.temperature;
+                delta = tempDiff * 0.05f; 
 
-            ParticleState b = neighbor->particleState();
-            int idxB = ny * width + nx;
+                accumulatedDelta[idxA] += delta;
+                accumulatedDelta[idxB] -= delta;
+            }
+            else
+            {
+                tempDiff = kAmbientTemp - a.temperature;
+                delta = tempDiff * 0.05f;
 
-            float tempDiff = b.temperature - a.temperature;
-            float delta = tempDiff * 0.05f; 
-
-            accumulatedDelta[idxA] += delta;
-            accumulatedDelta[idxB] -= delta;
+                accumulatedDelta[idxA] += delta;
+            }
         }
     }
 
@@ -306,8 +310,140 @@ void ParticleGrid::update()
     for (Cell& cell : m_particles)
     {
         ParticleState state = cell.particleState();
-        state.temperature += state.temperatureDelta;
-        state.temperatureDelta = 0.f;
+        if (!kParticleProperties.contains(cell.particleState().type))
+        {
+            throw errParticlePropertiesNotFound(state.type);
+        }
+        const ParticleProperties& props = kParticleProperties.at(state.type);
+
+        // Apply heat change
+        float heatEnergy = state.temperatureDelta;
+        const float maxLatentTransferRate = 5.f;
+
+        // --- SOLID TO LIQUID (MELTING) ---
+        if (state.phase == ParticlePhase::Solid && state.temperature >= props.meltingPoint)
+        {
+            if (heatEnergy > 0) { // Particle is absorbing heat
+                // How much latent heat do we still need to absorb to melt?
+                float neededLatent = props.latentHeatFusion - state.latentHeatAbsorbed;
+                // How much latent heat can we transfer this step?
+                float actualLatentTransferred = std::min({heatEnergy, neededLatent, maxLatentTransferRate});
+
+                state.latentHeatAbsorbed += actualLatentTransferred;
+                state.temperature = props.meltingPoint; // Keep temp at melting point during phase change
+
+                // Remove the transferred latent heat from heatEnergy, any remainder will be used for temperature change later
+                heatEnergy -= actualLatentTransferred; // This is crucial for conservation
+
+                if (state.latentHeatAbsorbed >= props.latentHeatFusion - 1e-6f) // Use epsilon for float comparison
+                {
+                    state.phase = ParticlePhase::Liquid;
+                    state.latentHeatAbsorbed = 0.f; // Reset after complete phase change
+                    // Any remaining heatEnergy should now go into heating the liquid
+                    state.temperature += (heatEnergy / props.specificHeat); // Apply remaining heat to temperature
+                }
+            } else { // Solid at melting point, but losing heat. It should cool as a solid.
+                state.temperature += state.temperatureDelta; // Allow it to cool below melting point
+                state.latentHeatAbsorbed = 0.f; // Not in a latent heat process
+            }
+            state.temperatureDelta = 0.f; // Reset delta at end of block
+        }
+        // --- LIQUID TO GAS (VAPORIZATION) ---
+        else if (state.phase == ParticlePhase::Liquid && state.temperature >= props.boilingPoint)
+        {
+            if (heatEnergy > 0) { // Particle is absorbing heat
+                float neededLatent = props.latentHeatVaporization - state.latentHeatAbsorbed;
+                float actualLatentTransferred = std::min({heatEnergy, neededLatent, maxLatentTransferRate});
+
+                state.latentHeatAbsorbed += actualLatentTransferred;
+                state.temperature = props.boilingPoint;
+
+                heatEnergy -= actualLatentTransferred; // Remove transferred latent heat
+
+                if (state.latentHeatAbsorbed >= props.latentHeatVaporization - 1e-6f)
+                {
+                    state.phase = ParticlePhase::Gas;
+                    state.latentHeatAbsorbed = 0.f;
+                    state.temperature += (heatEnergy / props.specificHeat); // Apply remaining heat to temperature
+                }
+            } else { // Liquid at boiling point, losing heat. Should condense or cool.
+                state.temperature += state.temperatureDelta;
+                state.latentHeatAbsorbed = 0.f;
+            }
+            state.temperatureDelta = 0.f;
+        }
+        // --- LIQUID TO SOLID (FREEZING) ---
+        else if (state.phase == ParticlePhase::Liquid && state.temperature <= props.meltingPoint)
+        {
+            if (heatEnergy < 0) { // Particle is losing heat (freezing)
+                // How much latent heat do we still need to release to freeze?
+                // Note: state.latentHeatAbsorbed is negative here, so props.latentHeatFusion + state.latentHeatAbsorbed
+                // (e.g., 100 + (-20)) means we still need to release 80.
+                float neededToRelease = props.latentHeatFusion + state.latentHeatAbsorbed;
+                // How much heat can we release this step? Use abs for comparison with maxLatentTransferRate
+                float actualLatentTransferred = std::max(heatEnergy, -maxLatentTransferRate); // This is already negative
+
+                // Ensure we don't 'over-release' more than what's needed for the phase change
+                // Or, more simply, clamp the change itself.
+                // If heatEnergy is -10 and maxLatent is 5, actualTransferred is -5.
+                // If heatEnergy is -2 and maxLatent is 5, actualTransferred is -2.
+                // We need to ensure we don't go past neededToRelease (negative value)
+                actualLatentTransferred = std::max(actualLatentTransferred, -neededToRelease); // Clamp to not release too much past 0
+
+                state.latentHeatAbsorbed += actualLatentTransferred; // Decreases (becomes more negative)
+                state.temperature = props.meltingPoint; // Clamps temperature during freezing
+
+                // Remaining heatEnergy is what wasn't used for latent heat. It's still negative.
+                heatEnergy -= actualLatentTransferred; // This will become more negative (remaining energy to remove)
+
+                if (state.latentHeatAbsorbed <= -props.latentHeatFusion + 1e-6f) // Use epsilon for float comparison
+                {
+                    state.phase = ParticlePhase::Solid;
+                    state.latentHeatAbsorbed = 0.0f; // Reset after complete phase change
+                    // Any remaining negative heatEnergy should now go into cooling the solid
+                    state.temperature += (heatEnergy / props.specificHeat); // Apply remaining heat to temperature
+                }
+            } else { // Liquid at melting point, but gaining heat. Should warm or re-melt.
+                state.temperature += state.temperatureDelta;
+                state.latentHeatAbsorbed = 0.f;
+            }
+            state.temperatureDelta = 0.f;
+        }
+        // --- GAS TO LIQUID (CONDENSATION) ---
+        else if (state.phase == ParticlePhase::Gas && state.temperature <= props.boilingPoint)
+        {
+            if (heatEnergy < 0) { // Particle is losing heat (condensing)
+                float neededToRelease = props.latentHeatVaporization + state.latentHeatAbsorbed;
+                float actualLatentTransferred = std::max(heatEnergy, -maxLatentTransferRate);
+                actualLatentTransferred = std::max(actualLatentTransferred, -neededToRelease);
+
+                state.latentHeatAbsorbed += actualLatentTransferred;
+                state.temperature = props.boilingPoint;
+
+                heatEnergy -= actualLatentTransferred; // Remaining negative heat
+
+                if (state.latentHeatAbsorbed <= -props.latentHeatVaporization + 1e-6f)
+                {
+                    state.phase = ParticlePhase::Liquid;
+                    state.latentHeatAbsorbed = 0.0f;
+                    state.temperature += (heatEnergy / props.specificHeat); // Apply remaining heat to temperature
+                }
+            } else { // Gas at boiling point, but gaining heat. Should heat up.
+                state.temperature += state.temperatureDelta;
+                state.latentHeatAbsorbed = 0.f;
+            }
+            state.temperatureDelta = 0.f;
+        }
+        // --- NO PHASE CHANGE / DEFAULT TEMPERATURE UPDATE ---
+        else
+        {
+            state.temperature += state.temperatureDelta;
+            state.latentHeatAbsorbed = 0.f; // Only reset if NOT actively in a phase transition
+            state.temperatureDelta = 0.f; // Always reset delta for next step
+        }
+
+        // Ensure temperature doesn't go below absolute zero
+        state.temperature = std::max(state.temperature, -273.15f); // Example for Celsius
         cell.setParticleState(state);
     }
 }
@@ -341,7 +477,7 @@ void ParticleGrid::updateCell(int x, int y)
 
     // Positioning
     ParticleUpdate update = { .nextCell = nullptr, .mode = ParticleUpdate::NOOP };
-    switch (kParticleProperties.at(cell->particleState().type).phase)
+    switch (cell->particleState().phase)
     {
     case ParticlePhase::Solid:
         update = particleUpdateFunc_Solid(this, x, y);

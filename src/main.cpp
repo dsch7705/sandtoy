@@ -25,7 +25,7 @@ static constexpr int kGridHeight { 128 };
 static constexpr int kScreenWidth { kGridWidth * kCellScale };
 static constexpr int kScreenHeight { kGridHeight * kCellScale };
 
-static constexpr int kFrameCap { 0 };
+static constexpr int kFrameCap { 240 };
 static constexpr double kFrameDuration { kFrameCap ? 1. / kFrameCap : -1 };
 ///////////////
 
@@ -232,9 +232,15 @@ static void mainloop()
     ImGui::End();
     //////////////////
     // Debug //
+
+    ImGui::SetNextWindowPos(ImVec2(kScreenWidth - 250.f, 0.f), ImGuiCond_Once);
     ImGui::Begin("Debug", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
 
-    ImGui::Text("Particle temperature: %f", brush->hoveredCell() ? brush->hoveredCell()->particleState().temperature : 0.f);
+    ParticleState hoveredCellState = brush->hoveredCell() ? brush->hoveredCell()->particleState() : defaultParticleState(ParticleType::Air);
+    ImGui::SeparatorText("Hovered particle");
+    ImGui::Text("Type: %s", kParticleTypeNames[static_cast<int>(hoveredCellState.type)].c_str());
+    ImGui::Text("Phase: %s", kParticlePhaseNames[static_cast<int>(hoveredCellState.phase)].c_str());
+    ImGui::Text("Temperature: %f", hoveredCellState.temperature);
 
     ImGui::End();
     ///////////

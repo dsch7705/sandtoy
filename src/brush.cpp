@@ -424,7 +424,7 @@ void Brush::update()
         for (Cell* cell : m_selectedCells)
         {
             ParticleState state = cell->particleState();
-            state.temperature = SDL_GetModState() & SDL_KMOD_SHIFT ? 0.f : 1000.f;
+            state.temperatureDelta += SDL_GetModState() & SDL_KMOD_SHIFT ? -1.f : 1.f;
             cell->setParticleState(state);
         }
     }
