@@ -73,14 +73,14 @@ namespace Util
         { 3000.0f, 0xFFFFFF88 }   // white-hot
     }};
     constexpr TemperatureColorList tempIRAnchors = {
-        TemperatureColor{ -273.0f, 0x00000088 }, // absolute zero - black
-        TemperatureColor{ -100.0f, 0x30005088 }, // cold - deep purple
-        TemperatureColor{   0.0f,  0x0040C088 }, // cool - blue
-        TemperatureColor{  100.0f, 0x00FFFF88 }, // medium - cyan
-        TemperatureColor{  500.0f, 0x80FF0088 }, // warm - lime
-        TemperatureColor{ 1000.0f, 0xFFFF0088 }, // hot - yellow
-        TemperatureColor{ 2000.0f, 0xFF800088 }, // very hot - red-orange
-        TemperatureColor{ 3000.0f, 0xFFFFFF88 }  // white hot
+        TemperatureColor{ -273.0f, 0x000000FF }, // absolute zero - black
+        TemperatureColor{ -100.0f, 0x300050FF }, // cold - deep purple
+        TemperatureColor{   0.0f,  0x0040C0FF }, // cool - blue
+        TemperatureColor{  100.0f, 0x00FFFFFF }, // medium - cyan
+        TemperatureColor{  500.0f, 0x80FF00FF }, // warm - lime
+        TemperatureColor{ 1000.0f, 0xFFFF00FF }, // hot - yellow
+        TemperatureColor{ 2000.0f, 0xFF8000FF }, // very hot - red-orange
+        TemperatureColor{ 3000.0f, 0xFFFFFFFF }  // white hot
     };
     inline uint32_t temperatureToColor(float tempC, TemperatureColorMode mode)
     {
