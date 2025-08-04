@@ -18,7 +18,7 @@
 
 
 // Constants //
-constexpr int kCellScale { 7 };
+constexpr int kCellScale { 6 };
 constexpr int kGridWidth { 256 };
 constexpr int kGridHeight { 128 };
 
@@ -42,9 +42,10 @@ static ImGuiIO* guiIO;
 static int guiBrushRadius;
 static float guiBrushRotation;
 static bool guiShowBrushHighlight;
-static bool guiShowTemperature;
 static bool guiShowControls { false };
 static bool guiShowFPS { true };
+
+static bool guiShowTemperature;
 
 static Uint64 freq = SDL_GetPerformanceFrequency();
 
@@ -166,11 +167,6 @@ static void mainloop()
     {
         brush->toggleHighlight();
     }
-    guiShowTemperature = grid->showTemp();
-    if (ImGui::Checkbox("Show temperature", &guiShowTemperature))
-    {
-        grid->toggleShowTemp();
-    }
     ImGui::Checkbox("Show controls", &guiShowControls);
     ImGui::Checkbox("Show FPS", &guiShowFPS);
 
@@ -242,15 +238,37 @@ static void mainloop()
     ImGui::Text("Type: %s", kParticleTypeNames[static_cast<int>(hoveredCellState.type)].c_str());
     ImGui::Text("Phase: %s", kParticlePhaseNames[static_cast<int>(hoveredCellState.phase)].c_str());
     ImGui::Text("Temperature: %.2f", hoveredCellState.temperature);
-    ImGui::Text("Ambient temp: ");
-    ImGui::SameLine(); 
-    ImGui::SetNextItemWidth(ImGui::GetWindowWidth() / 2.f);
 
-    if (ImGui::DragFloat("", &grid->ambientTemperature, 1.f, -273.f, 3000.f))
+    ImGui::SeparatorText("World");
+
+    //ImGui::SetNextItemWidth(ImGui::GetWindowWidth() / 2.f);
+    ImGui::PushItemWidth(debugWindowWidth / 3.f);
+    if (ImGui::DragFloat("Ambient temp", &grid->ambientTemperature, 1.f, -273.f, 3000.f))
     {
         grid->ambientTemperature = std::min(std::max(grid->ambientTemperature, kAbsZero), kMaxTemp);
     }
+    guiShowTemperature = grid->showTemp();
+    if (ImGui::Checkbox("Show temperature", &guiShowTemperature))
+    {
+        grid->toggleShowTemp();
+    }
+    if (guiShowTemperature)
+    {
+        if (ImGui::BeginCombo("Temp color mode", Util::kTemperatureColorModeNames[static_cast<int>(grid->tempColorMode())].c_str()))
+        {
+            for (int i = 0; i < static_cast<int>(Util::TemperatureColorMode::COUNT); ++i)
+            {
+                if (ImGui::Selectable(Util::kTemperatureColorModeNames[i].c_str()))
+                {
+                    grid->setTempColorMode(static_cast<Util::TemperatureColorMode>(i));
+                }
+            }
 
+            ImGui::EndCombo();
+        }
+    }
+
+    ImGui::PopItemWidth();
     debugWindowWidth = ImGui::GetWindowWidth();
     ImGui::End();
     ///////////

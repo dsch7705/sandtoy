@@ -1,7 +1,10 @@
+#pragma once
+
 #include <cstdint>
 #include <cmath>
 #include <functional>
 #include <algorithm>
+#include <string>
 
 
 namespace Util
@@ -35,12 +38,41 @@ namespace Util
         return (r << 24) | (g << 16) | (b << 8) | a;
     }
 
+    #define TEMP_COLOR_MODE_LIST \
+        X(Normal) \
+        X(Infrared)
+
+    enum class TemperatureColorMode
+    {
+    #define X(V) V,
+        TEMP_COLOR_MODE_LIST
+    #undef X
+        COUNT
+    };
+    constexpr std::string kTemperatureColorModeNames[] 
+    {
+    #define X(V) #V,
+        TEMP_COLOR_MODE_LIST
+    #undef X
+    };
+
     struct TemperatureColor 
     {
         float tempC;
         uint32_t color; // 0xRRGGBBAA
     };
-    constexpr std::array<TemperatureColor, 8> tempAnchors = {
+    typedef std::array<TemperatureColor, 8> TemperatureColorList;
+    constexpr TemperatureColorList tempAnchors = {{
+        { -273.0f, 0x00002288 },  // black-blue
+        {    0.0f, 0x00336688 },  // icy blue
+        {  100.0f, 0x0066CC88 },  // cool blue
+        {  300.0f, 0x80808088 },  // gray
+        {  800.0f, 0x88220088 },  // dark red
+        { 1500.0f, 0xFF550088 },  // orange
+        { 2400.0f, 0xFFFF6688 },  // yellow-white
+        { 3000.0f, 0xFFFFFF88 }   // white-hot
+    }};
+    constexpr TemperatureColorList tempIRAnchors = {
         TemperatureColor{ -273.0f, 0x00000088 }, // absolute zero - black
         TemperatureColor{ -100.0f, 0x30005088 }, // cold - deep purple
         TemperatureColor{   0.0f,  0x0040C088 }, // cool - blue
@@ -50,16 +82,29 @@ namespace Util
         TemperatureColor{ 2000.0f, 0xFF800088 }, // very hot - red-orange
         TemperatureColor{ 3000.0f, 0xFFFFFF88 }  // white hot
     };
-    inline uint32_t temperatureToColor(float tempC)
+    inline uint32_t temperatureToColor(float tempC, TemperatureColorMode mode)
     {
         // Clamp to valid range
         tempC = std::clamp(tempC, tempAnchors.front().tempC, tempAnchors.back().tempC);
+        const TemperatureColorList* p_anchors;
+        switch (mode)
+        {
+        case TemperatureColorMode::Infrared:
+            p_anchors = &tempIRAnchors;
+            break;
+
+        case Util::TemperatureColorMode::Normal:
+        default:
+            p_anchors = &tempAnchors;
+            break;
+        }
+        const TemperatureColorList& anchors = *p_anchors;
 
         // Find the interval [i, i+1] where tempC lies
-        for (size_t i = 0; i < tempAnchors.size() - 1; ++i)
+        for (size_t i = 0; i < anchors.size() - 1; ++i)
         {
-            const auto& low = tempAnchors[i];
-            const auto& high = tempAnchors[i + 1];
+            const auto& low = anchors[i];
+            const auto& high = anchors[i + 1];
 
             if (tempC >= low.tempC && tempC <= high.tempC)
             {
@@ -69,7 +114,7 @@ namespace Util
         }
 
         // Fallback (should not be reached)
-        return tempAnchors.back().color;
+        return anchors.back().color;
     }
 
     template <size_t N>

@@ -56,7 +56,7 @@ public:
     bool highlight() const;
 
     static constexpr int kMinRadius { 1 };
-    static constexpr int kMaxRadius { 20 };
+    static constexpr int kMaxRadius { 25 };
     // Scales the rate at which the scroll wheel resizes the brush
     static constexpr int kRadiusResizeScale { 1 };
     static constexpr float kRotationScale { 0.1f };

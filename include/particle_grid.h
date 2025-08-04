@@ -6,6 +6,7 @@
 #include <cstdlib>
 
 #include "particles.h"
+#include "util.h"
 
 
 // Forward Declarations //
@@ -73,6 +74,8 @@ struct ParticleGrid
     float ambientTemperature { 22.f };
     void toggleShowTemp();
     bool showTemp() const;
+    void setTempColorMode(Util::TemperatureColorMode mode);
+    Util::TemperatureColorMode tempColorMode() const;
 
 private:
     std::vector<Cell> m_particles;
@@ -85,6 +88,9 @@ private:
 
     bool m_showBrushHighlight { true };
     bool m_showTemperature { false };
+
+    // Mode for displaying heat colors
+    Util::TemperatureColorMode m_tempColorMode { Util::TemperatureColorMode::Normal };
 
     void updateCell(int x, int y);
     void update_b2t();

@@ -230,7 +230,7 @@ void ParticleGrid::draw()
         // Ambient temp colors
         if (m_showTemperature) 
         { 
-            cellColor = Util::blendRGBA(cellColor, Util::temperatureToColor(cell->particleState().temperature));
+            cellColor = Util::blendRGBA(cellColor, Util::temperatureToColor(cell->particleState().temperature, m_tempColorMode));
         }
 
         pixelBuffer[cell->y * (pitch / sizeof(Uint32)) + cell->x] = cellColor;
@@ -461,6 +461,23 @@ void ParticleGrid::toggleShowTemp()
 bool ParticleGrid::showTemp() const
 {
     return m_showTemperature;
+}
+void ParticleGrid::setTempColorMode(Util::TemperatureColorMode mode) 
+{
+    if (mode == m_tempColorMode)
+    {
+        return;
+    }
+
+    m_tempColorMode = mode;
+    for (Cell& cell : m_particles)
+    {
+        cell.markForRedraw();
+    }
+}
+Util::TemperatureColorMode ParticleGrid::tempColorMode() const 
+{
+    return m_tempColorMode;
 }
 
 void ParticleGrid::updateCell(int x, int y)
