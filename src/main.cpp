@@ -18,15 +18,15 @@
 
 
 // Constants //
-static constexpr int kCellScale { 6 };
-static constexpr int kGridWidth { 256 };
-static constexpr int kGridHeight { 128 };
+constexpr int kCellScale { 7 };
+constexpr int kGridWidth { 256 };
+constexpr int kGridHeight { 128 };
 
-static constexpr int kScreenWidth { kGridWidth * kCellScale };
-static constexpr int kScreenHeight { kGridHeight * kCellScale };
+constexpr int kScreenWidth { kGridWidth * kCellScale };
+constexpr int kScreenHeight { kGridHeight * kCellScale };
 
-static constexpr int kFrameCap { 240 };
-static constexpr double kFrameDuration { kFrameCap ? 1. / kFrameCap : -1 };
+constexpr int kFrameCap { 240 };
+constexpr double kFrameDuration { kFrameCap ? 1. / kFrameCap : -1 };
 ///////////////
 
 static SDL_Window* window;
@@ -122,7 +122,7 @@ static void mainloop()
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
 
-    ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Once);
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
     ImGui::Begin("Sandbox", NULL, ImGuiWindowFlags_AlwaysAutoResize);
     ImGui::PushItemWidth(100.f);
 
@@ -233,15 +233,25 @@ static void mainloop()
     //////////////////
     // Debug //
 
-    ImGui::SetNextWindowPos(ImVec2(kScreenWidth - 250.f, 0.f), ImGuiCond_Once);
+    static float debugWindowWidth { 100.f };
+    ImGui::SetNextWindowPos(ImVec2(kScreenWidth - debugWindowWidth, 0.f));
     ImGui::Begin("Debug", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
 
-    ParticleState hoveredCellState = brush->hoveredCell() ? brush->hoveredCell()->particleState() : defaultParticleState(ParticleType::Air);
+    ParticleState hoveredCellState = brush->hoveredCell() ? brush->hoveredCell()->particleState() : defaultParticleState(ParticleType::Air, grid->ambientTemperature);
     ImGui::SeparatorText("Hovered particle");
     ImGui::Text("Type: %s", kParticleTypeNames[static_cast<int>(hoveredCellState.type)].c_str());
     ImGui::Text("Phase: %s", kParticlePhaseNames[static_cast<int>(hoveredCellState.phase)].c_str());
-    ImGui::Text("Temperature: %f", hoveredCellState.temperature);
+    ImGui::Text("Temperature: %.2f", hoveredCellState.temperature);
+    ImGui::Text("Ambient temp: ");
+    ImGui::SameLine(); 
+    ImGui::SetNextItemWidth(ImGui::GetWindowWidth() / 2.f);
 
+    if (ImGui::DragFloat("", &grid->ambientTemperature, 1.f, -273.f, 3000.f))
+    {
+        grid->ambientTemperature = std::min(std::max(grid->ambientTemperature, kAbsZero), kMaxTemp);
+    }
+
+    debugWindowWidth = ImGui::GetWindowWidth();
     ImGui::End();
     ///////////
     // Draw //

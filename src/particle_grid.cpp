@@ -8,7 +8,7 @@
 #include <random>
 
 
-static constexpr CellState kDefaultCellState { .temperature = 0, .temperatureDelta = 0};
+constexpr CellState kDefaultCellState { .temperature = 0, .temperatureDelta = 0};
 
 Cell::Cell(ParticleGrid* particleGrid, int _x, int _y, ParticleState particleState) 
     : x(_x), y(_y)
@@ -103,7 +103,7 @@ ParticleGrid::ParticleGrid(const int w, const int h, SDL_Renderer* renderer)
     {
         for (int x = 0; x < width; ++x)
         {
-            m_particles.emplace_back(this, x, y);
+            m_particles.emplace_back(this, x, y, defaultParticleState(ParticleType::Air, ambientTemperature));
             m_coords.emplace_back(x, y);
 
             m_particles.back().markForRedraw();
@@ -228,7 +228,10 @@ void ParticleGrid::draw()
         //    cellColor = Util::blendRGBA(cellColor, 0x00FF0088);
         //}
         // Ambient temp colors
-        if (m_showTemperature) { cellColor = Util::blendRGBA(cellColor, Util::lerpColor(0x0000FF99, 0xFF000099, cell->particleState().temperature / 100.f)); }
+        if (m_showTemperature) 
+        { 
+            cellColor = Util::blendRGBA(cellColor, Util::temperatureToColor(cell->particleState().temperature));
+        }
 
         pixelBuffer[cell->y * (pitch / sizeof(Uint32)) + cell->x] = cellColor;
         cell->m_needsRedraw = false;
@@ -254,7 +257,8 @@ void ParticleGrid::update()
     std::vector<float> accumulatedDelta(m_particles.size(), 0.f);
 
     const std::pair<int, int> neighborOffsets[] = {
-        {1, 0}, {1, 1}, {0, 1}, {-1, 1}
+        {1, 0}, {-1, 0}, {0, 1}, {0, -1}
+        //{1, 0}, {1, 1}, {0, 1}, {-1, 1}
     };
 
     for (const auto& coord : m_coords)
@@ -289,7 +293,7 @@ void ParticleGrid::update()
             }
             else
             {
-                tempDiff = kAmbientTemp - a.temperature;
+                tempDiff = ambientTemperature - a.temperature;
                 delta = tempDiff * 0.05f;
 
                 accumulatedDelta[idxA] += delta;
@@ -297,16 +301,7 @@ void ParticleGrid::update()
         }
     }
 
-    // Phase 2: apply delta to each particle’s tempDelta
-    for (int i = 0; i < (int)m_particles.size(); ++i)
-    {
-        Cell& cell = m_particles[i]; 
-        ParticleState state = cell.particleState(); 
-        state.temperatureDelta += accumulatedDelta[i];
-        cell.setParticleState(state); 
-    }
-
-    // Phase 3: finalize temps and reset deltas
+    // Phase 2: Apply accumulated deltas, finalize temps and reset deltas
     for (Cell& cell : m_particles)
     {
         ParticleState state = cell.particleState();
@@ -317,6 +312,7 @@ void ParticleGrid::update()
         const ParticleProperties& props = kParticleProperties.at(state.type);
 
         // Apply heat change
+        state.temperatureDelta += accumulatedDelta[cell.y * width + cell.x];
         float heatEnergy = state.temperatureDelta;
         const float maxLatentTransferRate = 5.f;
 
@@ -442,8 +438,8 @@ void ParticleGrid::update()
             state.temperatureDelta = 0.f; // Always reset delta for next step
         }
 
-        // Ensure temperature doesn't go below absolute zero
-        state.temperature = std::max(state.temperature, -273.15f); // Example for Celsius
+        // Clamp temperature
+        state.temperature = std::min(std::max(state.temperature, kAbsZero), kMaxTemp);
         cell.setParticleState(state);
     }
 }
@@ -451,7 +447,7 @@ void ParticleGrid::clear(ParticleType type)
 {
     for (Cell& cell : m_particles)
     {
-        cell.setParticleState(defaultParticleState(type));
+        cell.setParticleState(defaultParticleState(type, ambientTemperature));
     }
 }
 void ParticleGrid::toggleShowTemp()

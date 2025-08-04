@@ -27,7 +27,7 @@ struct CellState
 };
 struct Cell
 {
-    Cell(ParticleGrid* particleGrid, int _x, int _y, ParticleState particleState = defaultParticleState(ParticleType::Air));
+    Cell(ParticleGrid* particleGrid, int x, int y, ParticleState particleState);
 
     const int x, y;
     char colorVariation;
@@ -70,6 +70,7 @@ struct ParticleGrid
     void update();
     void clear(ParticleType type = ParticleType::Air);
 
+    float ambientTemperature { 22.f };
     void toggleShowTemp();
     bool showTemp() const;
 
@@ -224,7 +225,7 @@ inline ParticleUpdate particleUpdateFunc_Gas(ParticleGrid* particleGrid, int x, 
     Cell* cellNext = nullptr;
 
     int rand = std::rand();
-    switch (rand % 7)
+    switch (rand % 3)
     {
     case 0:
         cellNext = particleGrid->getCell(x, y - 1);

@@ -16,7 +16,7 @@ enum class BrushType
 #undef X
     COUNT
 };
-static constexpr const char* BrushTypeNames[] =
+constexpr const char* BrushTypeNames[] =
 {
 #define X(NAME) #NAME,
     BRUSH_SHAPE_LIST

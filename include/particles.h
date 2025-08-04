@@ -17,7 +17,7 @@ enum class ParticlePhase
     PARTICLE_PHASE_LIST
 #undef X
 };
-static constexpr std::string kParticlePhaseNames[] = 
+constexpr std::string kParticlePhaseNames[] = 
 {
 #define X(NAME) #NAME,
     PARTICLE_PHASE_LIST
@@ -41,13 +41,15 @@ enum class ParticleType
 #undef X
     COUNT
 };
-static constexpr std::string kParticleTypeNames[] = 
+constexpr std::string kParticleTypeNames[] = 
 {
 #define X(NAME) #NAME,
     PARTICLE_LIST
 #undef X
 };
 
+constexpr float kAbsZero { -273.15f };
+constexpr float kMaxTemp { 3000.f };
 struct ParticleProperties
 {
     float specificHeat;
@@ -59,7 +61,7 @@ struct ParticleProperties
 
     bool affectedByGravity { true };
 };
-static constexpr ParticleProperties kSandProperties  {
+constexpr ParticleProperties kSandProperties  {
     .specificHeat = 0.20f,             
     .thermalConductivity = 0.00025f,    
     .meltingPoint = 1700.f,
@@ -67,7 +69,7 @@ static constexpr ParticleProperties kSandProperties  {
     .latentHeatFusion = 1.9f,          
     .latentHeatVaporization = 4.5f     
 };
-static constexpr ParticleProperties kStoneProperties {
+constexpr ParticleProperties kStoneProperties {
     .specificHeat = 0.19f,             
     .thermalConductivity = 0.0015f,     
     .meltingPoint = 1260.f,
@@ -76,7 +78,7 @@ static constexpr ParticleProperties kStoneProperties {
     .latentHeatVaporization = 4.0f,    
     .affectedByGravity = false
 };
-static constexpr ParticleProperties kWaterProperties {
+constexpr ParticleProperties kWaterProperties {
     .specificHeat = 1.00f,
     .thermalConductivity = 0.0006f,
     .meltingPoint = 0.f,
@@ -84,7 +86,7 @@ static constexpr ParticleProperties kWaterProperties {
     .latentHeatFusion = 0.33f,       
     .latentHeatVaporization = 2.26f  
 };
-static constexpr ParticleProperties kAirProperties {
+constexpr ParticleProperties kAirProperties {
     .specificHeat = 0.24f,             
     .thermalConductivity = 0.00005f,    
     .meltingPoint = -218.f,            
@@ -92,7 +94,6 @@ static constexpr ParticleProperties kAirProperties {
     .latentHeatFusion = 0.3f,
     .latentHeatVaporization = 2.28f
 };
-static constexpr float kAmbientTemp { 22.f };
 
 static const std::unordered_map<ParticleType, ParticleProperties> kParticleProperties {
     { ParticleType::Sand, kSandProperties },
@@ -124,7 +125,7 @@ struct ParticleState
         return (type == other.type && temperature == other.temperature && temperatureDelta == other.temperatureDelta);
     }
 };
-static ParticlePhase getInitialParticlePhase(ParticleType type)
+static ParticlePhase getParticlePhase(ParticleType type, float temperature)
 {
     if (!kParticleProperties.contains(type))
     {
@@ -132,11 +133,11 @@ static ParticlePhase getInitialParticlePhase(ParticleType type)
     }
 
     const ParticleProperties& props = kParticleProperties.at(type);
-    if (kAmbientTemp < props.meltingPoint)
+    if (temperature < props.meltingPoint)
     {
         return ParticlePhase::Solid;
     }
-    else if (kAmbientTemp >= props.meltingPoint && kAmbientTemp < props.boilingPoint)
+    else if (temperature >= props.meltingPoint && temperature < props.boilingPoint)
     {
         return ParticlePhase::Liquid;
     }
@@ -145,7 +146,7 @@ static ParticlePhase getInitialParticlePhase(ParticleType type)
         return ParticlePhase::Gas;
     }
 }
-static constexpr ParticleState defaultParticleState(ParticleType type)
+static const ParticleState defaultParticleState(ParticleType type, float temperature)
 {
-    return { .type = type, .phase = getInitialParticlePhase(type), .temperature = kAmbientTemp, .temperatureDelta = 0.f, .latentHeatAbsorbed = 0.f };
+    return { .type = type, .phase = getParticlePhase(type, temperature), .temperature = temperature, .temperatureDelta = 0.f, .latentHeatAbsorbed = 0.f };
 }

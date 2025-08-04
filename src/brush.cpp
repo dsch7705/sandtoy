@@ -415,7 +415,7 @@ void Brush::update()
     {
         for (Cell* cell : m_selectedCells)
         {
-            cell->setParticleState(defaultParticleState(m_particleType));
+            cell->setParticleState(defaultParticleState(m_particleType, m_canvas->ambientTemperature));
         }
     }
     
@@ -424,7 +424,7 @@ void Brush::update()
         for (Cell* cell : m_selectedCells)
         {
             ParticleState state = cell->particleState();
-            state.temperatureDelta += SDL_GetModState() & SDL_KMOD_SHIFT ? -1.f : 1.f;
+            state.temperatureDelta += SDL_GetModState() & SDL_KMOD_SHIFT ? -5.f : 5.f;
             cell->setParticleState(state);
         }
     }
@@ -488,7 +488,7 @@ void Brush::floodFill()
 
         if (cell->particleState().type == target)
         {
-            cell->setParticleState(defaultParticleState(m_particleType));
+            cell->setParticleState(defaultParticleState(m_particleType, m_canvas->ambientTemperature));
             q.push(m_canvas->getCell(cell->x + 1, cell->y));
             q.push(m_canvas->getCell(cell->x - 1, cell->y));
             q.push(m_canvas->getCell(cell->x, cell->y + 1));
