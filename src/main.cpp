@@ -93,7 +93,7 @@ static void mainloop()
                     break;
                 }
 
-            case SDLK_T:
+            case SDLK_I:
                 if (e.key.mod & SDL_KMOD_ALT)
                 {
                     grid->toggleShowTemp();
@@ -209,7 +209,7 @@ static void mainloop()
             CTRL_TABLE_SEPARATOR();
 
             CTRL_TABLE_ENTRY("Toggle Brush Highlight", "H");
-            CTRL_TABLE_ENTRY("Toggle Show Temp", "Alt + T");
+            CTRL_TABLE_ENTRY("Toggle Infrared Mode", "Alt + I");
             CTRL_TABLE_ENTRY("Toggle Show Controls", "Alt + C");
             CTRL_TABLE_ENTRY("Toggle Show FPS", "Alt + F");
 

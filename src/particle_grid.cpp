@@ -215,6 +215,13 @@ void ParticleGrid::draw()
             cellColor = choices[cell->colorVariation];
             break;
         }
+
+        case ParticleType::Crucible:
+        {
+            Uint32 choices[] = { 0x2A2A2A66, 0x2C2C2C66, 0x2E2E2E66, 0x31313166, 0x35353566 };
+            cellColor = choices[cell->colorVariation];
+            break;
+        }
         }
 
         // Blackbody radiation
