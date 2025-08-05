@@ -90,7 +90,7 @@ private:
     bool m_showTemperature { false };
 
     // Mode for displaying heat colors
-    Util::TemperatureColorMode m_tempColorMode { Util::TemperatureColorMode::Normal };
+    Util::TemperatureColorMode m_tempColorMode { Util::TemperatureColorMode::Infrared };
 
     void updateCell(int x, int y);
     void update_b2t();
@@ -123,10 +123,6 @@ inline ParticleUpdate particleUpdateFunc_Solid(ParticleGrid* particleGrid, int x
     }
 
     ParticleState particleState = cell->particleState();
-    if (!kParticleProperties.contains(particleState.type))
-    {
-        throw errParticlePropertiesNotFound(particleState.type);
-    }
     const ParticleProperties& props = kParticleProperties.at(particleState.type);
     if (!props.affectedByGravity) { return doNothing; }
 
@@ -177,6 +173,7 @@ inline ParticleUpdate particleUpdateFunc_Liquid(ParticleGrid* particleGrid, int 
     {
         return doNothing;
     }
+    const ParticleProperties& cellProps = kParticleProperties.at(cell->particleState().type);
 
     Cell* cellNext = nullptr;
 
@@ -184,6 +181,7 @@ inline ParticleUpdate particleUpdateFunc_Liquid(ParticleGrid* particleGrid, int 
     do { \
         if (cellNext) \
         { \
+            const ParticleProperties& props = kParticleProperties.at(cellNext->particleState().type);\
             int rand = std::rand(); \
             switch (cellNext->particleState().type) \
             { \
@@ -197,24 +195,47 @@ inline ParticleUpdate particleUpdateFunc_Liquid(ParticleGrid* particleGrid, int 
         } \
     } while (0)
 
+    auto tryUpdate = [&](Cell* nextCell) -> bool {
+        if (nextCell == nullptr) return false;
+
+        ParticleType type = nextCell->particleState().type;
+        const ParticleProperties& nextCellProps = kParticleProperties.at(type);
+        int rand = std::rand();
+        if (type == ParticleType::Air)
+        {
+            if (rand % 30 == 0) return false;
+            else return true;
+        }
+
+        if (cellNext->particleState().phase == ParticlePhase::Liquid && type != cell->particleState().type)
+        {
+            if (nextCellProps.density == cellProps.density) return true;
+            if (nextCellProps.density < cellProps.density && nextCell->y > cell->y) return true;
+            if (nextCell->y == cell->y && rand % 3 == 0) return true;
+        }
+
+        return false;
+    };
+
     // Down
     cellNext = particleGrid->getCell(x, y + 1);
-    TRY_UPDATE();
+    if (tryUpdate(cellNext)) return { .nextCell = cellNext, .mode = ParticleUpdate::Swap } ;
+    //TRY_UPDATE();
         
     // diag
     int dir = std::rand() % 2 ? 1 : -1;
     cellNext = particleGrid->getCell(x + dir, y + 1);
-    TRY_UPDATE();
+    if (tryUpdate(cellNext)) return { .nextCell = cellNext, .mode = ParticleUpdate::Swap } ;//TRY_UPDATE();
 
     cellNext = particleGrid->getCell(x - dir, y + 1);
-    TRY_UPDATE();
+    if (tryUpdate(cellNext)) return { .nextCell = cellNext, .mode = ParticleUpdate::Swap } ;//TRY_UPDATE();
 
     // horizontal
     cellNext = particleGrid->getCell(x + dir, y);
-    TRY_UPDATE();
+    if (tryUpdate(cellNext)) return { .nextCell = cellNext, .mode = ParticleUpdate::Swap } ;//TRY_UPDATE();
 
     cellNext = particleGrid->getCell(x - dir, y);
-    TRY_UPDATE();
+    if (tryUpdate(cellNext)) return { .nextCell = cellNext, .mode = ParticleUpdate::Swap } ;//TRY_UPDATE();
 
     #undef TRY_UPDATE
 

@@ -38,16 +38,20 @@ namespace Util
         return (r << 24) | (g << 16) | (b << 8) | a;
     }
 
+    constexpr float kAbsZero { -273.15f };
+    constexpr float kMaxTemp { 3000.f };
     #define TEMP_COLOR_MODE_LIST \
         X(Normal) \
-        X(Infrared)
+        X(Infrared) \
 
     enum class TemperatureColorMode
     {
     #define X(V) V,
         TEMP_COLOR_MODE_LIST
     #undef X
-        COUNT
+        COUNT,
+
+        Radiation
     };
     constexpr std::string kTemperatureColorModeNames[] 
     {
@@ -63,24 +67,34 @@ namespace Util
     };
     typedef std::array<TemperatureColor, 8> TemperatureColorList;
     constexpr TemperatureColorList tempAnchors = {{
-        { -273.0f, 0x00002288 },  // black-blue
+        { kAbsZero, 0x00002288 },  // black-blue
         {    0.0f, 0x00336688 },  // icy blue
         {  100.0f, 0x0066CC88 },  // cool blue
         {  300.0f, 0x80808088 },  // gray
         {  800.0f, 0x88220088 },  // dark red
         { 1500.0f, 0xFF550088 },  // orange
         { 2400.0f, 0xFFFF6688 },  // yellow-white
-        { 3000.0f, 0xFFFFFF88 }   // white-hot
+        { kMaxTemp, 0xFFFFFF88 }   // white-hot
     }};
     constexpr TemperatureColorList tempIRAnchors = {
-        TemperatureColor{ -273.0f, 0x000000FF }, // absolute zero - black
+        TemperatureColor{ kAbsZero, 0x000000FF }, // absolute zero - black
         TemperatureColor{ -100.0f, 0x300050FF }, // cold - deep purple
         TemperatureColor{   0.0f,  0x0040C0FF }, // cool - blue
         TemperatureColor{  100.0f, 0x00FFFFFF }, // medium - cyan
         TemperatureColor{  500.0f, 0x80FF00FF }, // warm - lime
         TemperatureColor{ 1000.0f, 0xFFFF00FF }, // hot - yellow
         TemperatureColor{ 2000.0f, 0xFF8000FF }, // very hot - red-orange
-        TemperatureColor{ 3000.0f, 0xFFFFFFFF }  // white hot
+        TemperatureColor{ kMaxTemp, 0xFFFFFFFF }  // white hot
+    };
+    constexpr std::array<TemperatureColor, 8> blackbodyGlowAnchors = {
+        TemperatureColor{    kAbsZero,  0x00000000 }, // No glow
+        TemperatureColor{  525.0f,  0x2E000022 }, // Very dark red, very faint
+        TemperatureColor{  700.0f,  0x80000044 }, // Dull red
+        TemperatureColor{ 1000.0f,  0xFF300066 }, // Bright red
+        TemperatureColor{ 1200.0f,  0xFF800088 }, // Orange
+        TemperatureColor{ 1500.0f,  0xFFFF00AA }, // Yellow
+        TemperatureColor{ 2000.0f,  0xFFFFFFCC }, // White hot
+        TemperatureColor{ kMaxTemp,  0xA0C8FFFF }  // Blue-white, fully visible
     };
     inline uint32_t temperatureToColor(float tempC, TemperatureColorMode mode)
     {
@@ -91,6 +105,10 @@ namespace Util
         {
         case TemperatureColorMode::Infrared:
             p_anchors = &tempIRAnchors;
+            break;
+
+        case TemperatureColorMode::Radiation:
+            p_anchors = &blackbodyGlowAnchors;
             break;
 
         case Util::TemperatureColorMode::Normal:

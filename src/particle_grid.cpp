@@ -215,22 +215,20 @@ void ParticleGrid::draw()
             cellColor = choices[cell->colorVariation];
             break;
         }
+        }
 
+        // Blackbody radiation
+        cellColor = Util::blendRGBA(cellColor, Util::temperatureToColor(cell->particleState().temperature, Util::TemperatureColorMode::Radiation));
+
+        if (m_showTemperature) 
+        { 
+            cellColor = Util::blendRGBA(cellColor, Util::temperatureToColor(cell->particleState().temperature, m_tempColorMode));
         }
 
         // Add brush overlay
         if (m_showBrushHighlight && cell->isBrushSelected())
         {
             cellColor = Util::blendRGBA(cellColor, 0xFFFFFF22);
-        }
-        //if (cell->isBrushOutline())
-        //{
-        //    cellColor = Util::blendRGBA(cellColor, 0x00FF0088);
-        //}
-        // Ambient temp colors
-        if (m_showTemperature) 
-        { 
-            cellColor = Util::blendRGBA(cellColor, Util::temperatureToColor(cell->particleState().temperature, m_tempColorMode));
         }
 
         pixelBuffer[cell->y * (pitch / sizeof(Uint32)) + cell->x] = cellColor;
@@ -305,10 +303,6 @@ void ParticleGrid::update()
     for (Cell& cell : m_particles)
     {
         ParticleState state = cell.particleState();
-        if (!kParticleProperties.contains(cell.particleState().type))
-        {
-            throw errParticlePropertiesNotFound(state.type);
-        }
         const ParticleProperties& props = kParticleProperties.at(state.type);
 
         // Apply heat change
@@ -439,7 +433,7 @@ void ParticleGrid::update()
         }
 
         // Clamp temperature
-        state.temperature = std::min(std::max(state.temperature, kAbsZero), kMaxTemp);
+        state.temperature = std::min(std::max(state.temperature, Util::kAbsZero), Util::kMaxTemp);
         cell.setParticleState(state);
     }
 }

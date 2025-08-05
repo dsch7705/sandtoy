@@ -241,32 +241,31 @@ static void mainloop()
 
     ImGui::SeparatorText("World");
 
-    //ImGui::SetNextItemWidth(ImGui::GetWindowWidth() / 2.f);
-    ImGui::PushItemWidth(debugWindowWidth / 3.f);
+    ImGui::PushItemWidth(debugWindowWidth / 2.f);
     if (ImGui::DragFloat("Ambient temp", &grid->ambientTemperature, 1.f, -273.f, 3000.f))
     {
-        grid->ambientTemperature = std::min(std::max(grid->ambientTemperature, kAbsZero), kMaxTemp);
+        grid->ambientTemperature = std::min(std::max(grid->ambientTemperature, Util::kAbsZero), Util::kMaxTemp);
     }
     guiShowTemperature = grid->showTemp();
-    if (ImGui::Checkbox("Show temperature", &guiShowTemperature))
+    if (ImGui::Checkbox("Infrared mode", &guiShowTemperature))
     {
         grid->toggleShowTemp();
     }
-    if (guiShowTemperature)
-    {
-        if (ImGui::BeginCombo("Temp color mode", Util::kTemperatureColorModeNames[static_cast<int>(grid->tempColorMode())].c_str()))
-        {
-            for (int i = 0; i < static_cast<int>(Util::TemperatureColorMode::COUNT); ++i)
-            {
-                if (ImGui::Selectable(Util::kTemperatureColorModeNames[i].c_str()))
-                {
-                    grid->setTempColorMode(static_cast<Util::TemperatureColorMode>(i));
-                }
-            }
-
-            ImGui::EndCombo();
-        }
-    }
+    //if (guiShowTemperature)
+    //{
+    //    if (ImGui::BeginCombo("Temp color mode", Util::kTemperatureColorModeNames[static_cast<int>(grid->tempColorMode())].c_str()))
+    //    {
+    //        for (int i = 0; i < static_cast<int>(Util::TemperatureColorMode::COUNT); ++i)
+    //        {
+    //            if (ImGui::Selectable(Util::kTemperatureColorModeNames[i].c_str()))
+    //            {
+    //                grid->setTempColorMode(static_cast<Util::TemperatureColorMode>(i));
+    //            }
+    //        }
+//
+    //        ImGui::EndCombo();
+    //    }
+    //}
 
     ImGui::PopItemWidth();
     debugWindowWidth = ImGui::GetWindowWidth();
@@ -297,6 +296,19 @@ static void mainloop()
 
 int main(int argc, char** argv)
 {
+    // Check to make sure all particle types have a ParticleProperties
+    bool missingParticleProperties = false;
+    for (int i = 0; i < static_cast<int>(ParticleType::COUNT); ++i)
+    {
+        if (!kParticleProperties.contains(static_cast<ParticleType>(i)))
+        {
+            std::cerr << "[INIT] ParticleType '" << kParticleTypeNames[i] << "' does not have a ParticleProperties entry in kParticleProperties.\n";
+            missingParticleProperties = true;
+        }
+
+    }
+    if (missingParticleProperties) return -1;
+
     SDL_Init(SDL_INIT_VIDEO);
     std::srand(std::time(0));
     
@@ -310,11 +322,6 @@ int main(int argc, char** argv)
 
     ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
     ImGui_ImplSDLRenderer3_Init(renderer);
-
-    //ImFont* roboto_med = guiIO->Fonts->AddFontFromFileTTF(IMGUI_FONTS_DIR"/Roboto-Medium.ttf");
-    //roboto_med->Scale = 0.75f;
-    //guiIO->Fonts->Build();
-    ////////////////
 
     grid = new ParticleGrid(kGridWidth, kGridHeight, renderer);
     brush = new Brush(5.f, ParticleType::Sand);
