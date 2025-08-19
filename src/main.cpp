@@ -25,7 +25,7 @@ constexpr int kGridHeight { 128 };
 constexpr int kScreenWidth { kGridWidth * kCellScale };
 constexpr int kScreenHeight { kGridHeight * kCellScale };
 
-constexpr int kFrameCap { 240 };
+constexpr int kFrameCap { 0 };
 constexpr double kFrameDuration { kFrameCap ? 1. / kFrameCap : -1 };
 ///////////////
 

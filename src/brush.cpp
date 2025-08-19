@@ -220,6 +220,10 @@ void Brush::setRotation(float radians)
 }
 void Brush::setPos(int x, int y)
 {
+    if (x < 0 || x > m_canvas->width - 1 || y < 0 || y > m_canvas->height - 1)
+    {
+        return;
+    }
     m_x = x;
     m_y = y;
     switch (m_brushType)
