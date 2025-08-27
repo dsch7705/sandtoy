@@ -6,7 +6,11 @@
 #include <algorithm>
 #include <string>
 
-
+// Forward Declarations //
+struct SDL_Renderer;
+struct SDL_Texture;
+struct SDL_Rect;
+//////////////////////////
 namespace Util
 {
     uint32_t blendRGBA(uint32_t a, uint32_t b);
@@ -197,4 +201,5 @@ namespace Util
 
     constexpr float PI = 3.14159f;
 
+    SDL_Texture* scaleTexture(SDL_Renderer* renderer, SDL_Texture* in, unsigned int newW, unsigned int newH);
 }

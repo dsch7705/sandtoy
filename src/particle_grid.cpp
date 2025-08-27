@@ -1,7 +1,11 @@
 #include "particle_grid.h"
+#include "SDL3/SDL_surface.h"
+#include "particles.h"
 #include "util.h"
 
 #include <SDL3/SDL.h>
+#include <SDL3/SDL_render.h>
+#include <SDL3_image/SDL_image.h>
 #include <cassert>
 #include <iostream>
 #include <algorithm>
@@ -91,6 +95,7 @@ void Cell::markForRedraw()
     }
 }
 
+static SDL_Surface* sfMexicanFlag { nullptr };
 ParticleGrid::ParticleGrid(const int w, const int h, SDL_Renderer* renderer)
     : width(w)
     , height(h)
@@ -115,12 +120,40 @@ ParticleGrid::ParticleGrid(const int w, const int h, SDL_Renderer* renderer)
     SDL_GetCurrentRenderOutputSize(m_renderer, &rW, &rH);
     m_rendererRect = { .x = 0, .y = 0, .w = static_cast<float>(rW), .h = static_cast<float>(rH) };
 
+    // Textures
     m_streamingTexture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, w, h);
     SDL_SetTextureScaleMode(m_streamingTexture, SDL_SCALEMODE_NEAREST);
+
+    if (sfMexicanFlag == nullptr)
+    {
+        SDL_Texture* texFull = IMG_LoadTexture(renderer, ASSETS_DIR"/images/mexico.png");
+        assert(texFull != nullptr);
+
+        SDL_Texture* texScaled = Util::scaleTexture(renderer, texFull, w, h);
+        assert(texScaled != nullptr);
+
+        SDL_Rect gridRect { 0, 0, w, h };
+        SDL_SetRenderTarget(renderer, texScaled);
+        SDL_Surface* sfARGB = SDL_RenderReadPixels(renderer, &gridRect);
+        SDL_SetRenderTarget(renderer, nullptr);
+        sfMexicanFlag = SDL_ConvertSurface(sfARGB, SDL_PIXELFORMAT_RGBA8888);
+
+        SDL_DestroySurface(sfARGB);
+        SDL_DestroyTexture(texFull);
+        SDL_DestroyTexture(texScaled);
+    }
 }
 ParticleGrid::~ParticleGrid()
 {
     SDL_DestroyTexture(m_streamingTexture);
+}
+void ParticleGrid::startup()
+{
+    
+}
+void ParticleGrid::cleanup()
+{
+    SDL_DestroySurface(sfMexicanFlag);
 }
 
 Cell* ParticleGrid::getCell(int x, int y)
@@ -148,10 +181,11 @@ void ParticleGrid::draw()
     for (Cell* cell : m_redrawCells)
     {
         Uint32 cellColor;
+        constexpr Uint32 kErrorColor { 0xFF00FFFF };
         switch (cell->particleState().type)
         {
         default:
-            cellColor = 0xFF00FFFF;
+            cellColor = kErrorColor;
             break;
 
         case ParticleType::Air:
@@ -222,8 +256,24 @@ void ParticleGrid::draw()
             cellColor = choices[cell->colorVariation];
             break;
         }
+
+        case ParticleType::Raulium:
+        {
+            if (sfMexicanFlag == nullptr || sfMexicanFlag->pixels == nullptr)
+            {
+                cellColor = kErrorColor;
+                break;
+            }
+
+            Uint32* pixels = static_cast<Uint32*>(sfMexicanFlag->pixels);
+            Uint32 flipped = pixels[cell->y * width + cell->x];
+            //cellColor = ((flipped & 0x00FFFFFF) << 8) | ((flipped & 0xFF000000) >> 24); 
+            cellColor = flipped;
+            break;
         }
 
+        }
+    
         // Blackbody radiation
         cellColor = Util::blendRGBA(cellColor, Util::temperatureToColor(cell->particleState().temperature, Util::TemperatureColorMode::Radiation));
 

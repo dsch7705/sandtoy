@@ -1,3 +1,4 @@
+#include "SDL3/SDL_timer.h"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 
@@ -15,7 +16,6 @@
 #include "imgui.h"
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_sdlrenderer3.h"
-
 
 // Constants //
 constexpr int kCellScale { 6 };
@@ -52,6 +52,7 @@ static Uint64 freq = SDL_GetPerformanceFrequency();
 static bool quit { false };
 static void mainloop()
 {
+    startTime = SDL_GetPerformanceCounter();
     startTime = SDL_GetPerformanceCounter();
 
     // Handle Events //
@@ -320,6 +321,8 @@ int main(int argc, char** argv)
     ImGui::CreateContext();
     guiIO = &ImGui::GetIO();
 
+    guiIO->Fonts->AddFontFromFileTTF(ASSETS_DIR"/fonts/Roboto-Medium.ttf", 18.f);
+
     ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
     ImGui_ImplSDLRenderer3_Init(renderer);
 
@@ -335,6 +338,8 @@ int main(int argc, char** argv)
     
     delete brush;
     delete grid;
+
+    ParticleGrid::cleanup();
 
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);

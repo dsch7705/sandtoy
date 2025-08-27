@@ -77,6 +77,9 @@ struct ParticleGrid
     void setTempColorMode(Util::TemperatureColorMode mode);
     Util::TemperatureColorMode tempColorMode() const;
 
+    static void startup();
+    static void cleanup();
+
 private:
     std::vector<Cell> m_particles;
     std::vector<std::pair<int, int>> m_coords;

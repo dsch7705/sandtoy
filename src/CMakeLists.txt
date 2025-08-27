@@ -5,18 +5,20 @@ set(SRC main.cpp
         util.cpp)
 
 set(IMGUI_DIR ${CMAKE_SOURCE_DIR}/lib/imgui)
-set(IMGUI_FONTS_DIR ${IMGUI_DIR}/misc/fonts)
+set(ASSETS_DIR ${CMAKE_SOURCE_DIR}/assets)
 
 file(GLOB IMGUI_SRC ${IMGUI_DIR}/*.cpp
                     ${IMGUI_DIR}/backends/imgui_impl_sdl3.cpp
                     ${IMGUI_DIR}/backends/imgui_impl_sdlrenderer3.cpp)
 
 set(EXE_NAME sandtoy)
-
 add_executable(${EXE_NAME})
 
-
-target_compile_definitions(${EXE_NAME} PRIVATE IMGUI_FONTS_DIR="${IMGUI_FONTS_DIR}")
+if (EMSCRIPTEN)
+    target_compile_definitions(${EXE_NAME} PRIVATE ASSETS_DIR="/assets")
+else ()
+    target_compile_definitions(${EXE_NAME} PRIVATE ASSETS_DIR="${ASSETS_DIR}")
+endif ()
 
 if (EMSCRIPTEN)
         set(EM_SHELL ${CMAKE_CURRENT_SOURCE_DIR}/html/shell.html)
@@ -27,7 +29,8 @@ if (EMSCRIPTEN)
         target_link_options(${EXE_NAME} PRIVATE "-sEXPORTED_FUNCTIONS=['_malloc', '_free', '_main']"
                                                 "-sASSERTIONS"
                                                 "-sALLOW_MEMORY_GROWTH=1"
-                                                "--shell-file=${EM_SHELL}")
+                                                "--shell-file=${EM_SHELL}"
+                                                "--preload-file=${ASSETS_DIR}@/assets")
 
         add_custom_command(
                 OUTPUT ${EM_SHELL_TRIGGER}
@@ -55,7 +58,7 @@ target_sources(${EXE_NAME} PRIVATE ${SRC}
                                    ${IMGUI_SRC}
                                    ${EM_SHELL_TRIGGER})
 
-target_link_libraries(${EXE_NAME} PRIVATE SDL3-static)
+target_link_libraries(${EXE_NAME} PRIVATE SDL3-static SDL3_image-static)
 
 message(STATUS "Syslink compile commands")
 execute_process(

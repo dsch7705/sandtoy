@@ -33,7 +33,8 @@ constexpr std::string kParticlePhaseNames[] =
     X(Blue) \
     X(Pink) \
     X(Rainbow) \
-    X(Air) 
+    X(Air) \
+    X(Raulium)
 
 enum class ParticleType
 {
@@ -125,6 +126,7 @@ static const std::unordered_map<ParticleType, ParticleProperties> kParticlePrope
     { ParticleType::Pink, kSandProperties },
     { ParticleType::Rainbow, kSandProperties },
     { ParticleType::Air, kAirProperties },
+    { ParticleType::Raulium, kSandProperties },
 };
 
 struct ParticleState
