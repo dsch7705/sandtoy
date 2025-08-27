@@ -3,4 +3,7 @@
 	url = https://github.com/ocornut/imgui.git
 [submodule "lib/SDL"]
 	path = lib/SDL
-	url = git@github.com:libsdl-org/SDL.git
+	url = https://github.com/libsdl-org/SDL.git
+[submodule "lib/SDL_image"]
+	path = lib/SDL_image
+	url = https://github.com/libsdl-org/SDL_image.git

@@ -115,7 +115,7 @@ void Brush::handleEvent(SDL_Event* event, bool isUiFocused)
             else if (newRot < 0.f) { newRot = 0.f; }
             setRotation(newRot);
         }
-        else
+        else if (!isUiFocused)
         {
             int newRadius = m_radius + (kRadiusResizeScale * event->wheel.y);
             if      (newRadius > kMaxRadius) { newRadius = kMaxRadius; }

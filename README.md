@@ -42,21 +42,21 @@ cmake --build .
 ## Screenshots
 
 <p align="center">
-  <img src="res/images/ss_006.png" width="45%" />
-  <img src="res/images/ss_007.png" width="45%" />
+  <img src="screenshots/ss_006.png" width="45%" />
+  <img src="screenshots/ss_007.png" width="45%" />
 </p>
 
 <p align="center">
-  <img src="res/images/ss_008.png" width="45%" />
-  <img src="res/images/ss_009.png" width="45%" />
+  <img src="screenshots/ss_008.png" width="45%" />
+  <img src="screenshots/ss_009.png" width="45%" />
 </p>
 
 <p align="center">
-  <img src="res/images/ss_010.png" width="45%" />
-  <img src="res/images/ss_011.png" width="45%" />
+  <img src="screenshots/ss_010.png" width="45%" />
+  <img src="screenshots/ss_011.png" width="45%" />
 </p>
 
 <p align="center">
-  <img src="res/images/ss_012.png" width="45%" />
-  <img src="res/images/ss_013.png" width="45%" />
+  <img src="screenshots/ss_012.png" width="45%" />
+  <img src="screenshots/ss_013.png" width="45%" />
 </p>
