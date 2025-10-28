@@ -17,7 +17,7 @@ enum class ParticlePhase
     PARTICLE_PHASE_LIST
 #undef X
 };
-constexpr std::string kParticlePhaseNames[] = 
+const std::string kParticlePhaseNames[] = 
 {
 #define X(NAME) #NAME,
     PARTICLE_PHASE_LIST
@@ -43,7 +43,7 @@ enum class ParticleType
 #undef X
     COUNT
 };
-constexpr std::string kParticleTypeNames[] = 
+const std::string kParticleTypeNames[] = 
 {
 #define X(NAME) #NAME,
     PARTICLE_LIST

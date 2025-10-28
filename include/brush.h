@@ -78,6 +78,8 @@ private:
     // Stores canvas states when edits are made
     struct CompoundState
     {
+        CompoundState(ParticleState pState, CellState cState) : particleState(pState), cellState(cState) {}
+
         ParticleState particleState;
         CellState cellState;
     };

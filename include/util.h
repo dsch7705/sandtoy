@@ -57,7 +57,7 @@ namespace Util
 
         Radiation
     };
-    constexpr std::string kTemperatureColorModeNames[] 
+    const std::string kTemperatureColorModeNames[] 
     {
     #define X(V) #V,
         TEMP_COLOR_MODE_LIST

@@ -275,6 +275,8 @@ void Brush::pushCanvasState()
     canvasState.reserve(m_canvas->width * m_canvas->height);
     for (const Cell& cell : m_canvas->m_particles)
     {
+        //Brush::CompoundState cmpState(cell.particleState(), cell.cellState());
+        //canvasState.push_back(std::move(cmpState));
         canvasState.emplace_back(cell.particleState(), cell.cellState());
     }
     m_canvasStateStack.push(std::move(canvasState));
