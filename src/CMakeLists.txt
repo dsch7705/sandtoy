@@ -5,7 +5,9 @@ set(SRC main.cpp
         util.cpp)
 
 set(IMGUI_DIR ${CMAKE_SOURCE_DIR}/lib/imgui)
+set(CEREAL_DIR ${CMAKE_SOURCE_DIR}/lib/cereal)
 set(ASSETS_DIR ${CMAKE_SOURCE_DIR}/assets)
+set(SANDBOXES_DIR ${CMAKE_SOURCE_DIR}/sandboxes)
 
 file(GLOB IMGUI_SRC ${IMGUI_DIR}/*.cpp
                     ${IMGUI_DIR}/backends/imgui_impl_sdl3.cpp
@@ -15,9 +17,11 @@ set(EXE_NAME sandtoy)
 add_executable(${EXE_NAME})
 
 if (EMSCRIPTEN)
-    target_compile_definitions(${EXE_NAME} PRIVATE ASSETS_DIR="/assets")
+    target_compile_definitions(${EXE_NAME} PRIVATE ASSETS_DIR="/assets"
+                                                        SANDBOXES_DIR="/persistent/sandboxes")
 else ()
-    target_compile_definitions(${EXE_NAME} PRIVATE ASSETS_DIR="${ASSETS_DIR}")
+    target_compile_definitions(${EXE_NAME} PRIVATE ASSETS_DIR="${ASSETS_DIR}"
+                                                        SANDBOXES_DIR="${SANDBOXES_DIR}")
 endif ()
 
 if (EMSCRIPTEN)
@@ -30,7 +34,8 @@ if (EMSCRIPTEN)
                                                 "-sASSERTIONS"
                                                 "-sALLOW_MEMORY_GROWTH=1"
                                                 "--shell-file=${EM_SHELL}"
-                                                "--preload-file=${ASSETS_DIR}@/assets")
+                                                "--preload-file=${ASSETS_DIR}@/assets"
+                                                "-lidbfs.js")
 
         add_custom_command(
                 OUTPUT ${EM_SHELL_TRIGGER}
@@ -52,13 +57,15 @@ endif()
 
 target_include_directories(${EXE_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/include
                                            ${IMGUI_DIR}
-                                           ${IMGUI_DIR}/backends)
+                                           ${IMGUI_DIR}/backends
+                                           ${CEREAL_DIR}/include)
 
 target_sources(${EXE_NAME} PRIVATE ${SRC}
                                    ${IMGUI_SRC}
                                    ${EM_SHELL_TRIGGER})
 
-target_link_libraries(${EXE_NAME} PRIVATE SDL3-static SDL3_image-static)
+target_link_libraries(${EXE_NAME} PRIVATE SDL3-static 
+                                        SDL3_image-static)
 
 message(STATUS "Syslink compile commands")
 execute_process(

@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <string>
 #include <array>
+
 #include "util.h"
 
 
@@ -165,7 +166,7 @@ const std::unordered_map<ParticleType, ParticleProperties> kParticleProperties {
 };
 
 struct ParticleState
-{
+{   
     ParticleType type;
     ParticlePhase phase;
 
@@ -176,6 +177,19 @@ struct ParticleState
     bool operator==(const ParticleState& other) const
     {
         return (type == other.type && temperature == other.temperature && temperatureDelta == other.temperatureDelta);
+    }
+
+    template<class Archive>
+    void serialize(Archive& ar)
+    {
+        ar(
+            type,
+            phase,
+
+            temperature,
+            temperatureDelta,
+            latentHeatAbsorbed
+        );
     }
 };
 static ParticlePhase getParticlePhase(ParticleType type, float temperature)

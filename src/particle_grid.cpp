@@ -1,7 +1,8 @@
 #include "particle_grid.h"
-#include "SDL3/SDL_surface.h"
 #include "particles.h"
 #include "util.h"
+
+#include "SDL3/SDL_surface.h"
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_render.h>
@@ -12,7 +13,8 @@
 #include <random>
 
 
-constexpr CellState kDefaultCellState { .temperature = 0, .temperatureDelta = 0};
+const CellState kDefaultCellState(0.f, 0.f);
+
 
 Cell::Cell(ParticleGrid* particleGrid, int _x, int _y, ParticleState particleState) 
     : x(_x), y(_y)
@@ -28,17 +30,18 @@ Cell::Cell(ParticleGrid* particleGrid, int _x, int _y, ParticleState particleSta
     m_particleGrid = particleGrid;
     colorVariation = std::rand() % 5;
 }
-void Cell::setParticleState(ParticleState state)
+bool Cell::setParticleState(ParticleState state)
 {
     if (state == m_particleState)
     {
-        return;
+        return false;
     }
     if (state.type != m_particleState.type || state.temperature != m_particleState.temperature)
     {
         markForRedraw();
     }
     m_particleState = state;
+    return true;
 }
 ParticleState Cell::particleState() const
 {
@@ -427,12 +430,16 @@ void ParticleGrid::update()
         cell.setParticleState(state);
     }
 }
-void ParticleGrid::clear(ParticleType type)
+bool ParticleGrid::clear(ParticleType type)
 {
+    bool cellReset { false };
     for (Cell& cell : m_particles)
     {
-        cell.setParticleState(defaultParticleState(type, ambientTemperature));
+        if (cell.setParticleState(defaultParticleState(type, ambientTemperature)))
+            cellReset = true;
     }
+
+    return cellReset;
 }
 void ParticleGrid::toggleShowTemp()
 {
@@ -462,6 +469,37 @@ void ParticleGrid::setTempColorMode(Util::TemperatureColorMode mode)
 Util::TemperatureColorMode ParticleGrid::tempColorMode() const 
 {
     return m_tempColorMode;
+}
+
+ParticleGrid::CanvasState ParticleGrid::getCanvasState() const
+{
+    CanvasState canvasState;
+    canvasState.states.reserve(width * height);
+    for (const Cell& cell : m_particles)
+    {
+        canvasState.states.emplace_back(cell.particleState(), cell.cellState());
+    }
+    return canvasState;
+}
+void ParticleGrid::setCanvasState(const CanvasState& state)
+{
+    size_t canvasSize = width * height;
+    if (state.states.size() == canvasSize)
+    {
+        for (int i = 0; i < canvasSize; ++i)
+        {
+            Cell& cell = m_particles.at(i);
+            CompoundState compoundState = state.states.at(i);
+            cell.setParticleState(compoundState.particleState);
+            cell.setCellState(compoundState.cellState);
+        }
+
+        isPaused = true;
+    }
+    else
+    {
+        std::cerr << __func__ << ": Canvas state size (" << state.states.size() << ") does not match current canvas size (" << canvasSize << " [" << width << "x" << height << "]); discarding\n";
+    }
 }
 
 void ParticleGrid::updateCell(int x, int y)

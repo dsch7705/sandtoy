@@ -7,3 +7,12 @@
 [submodule "lib/SDL_image"]
 	path = lib/SDL_image
 	url = https://github.com/libsdl-org/SDL_image.git
+[submodule "json"]
+	path = json
+	url = https://github.com/nlohmann/json.git
+[submodule "lib/json"]
+	path = lib/json
+	url = https://github.com/nlohmann/json.git
+[submodule "lib/cereal"]
+	path = lib/cereal
+	url = https://github.com/USCiLab/cereal.git

@@ -1,4 +1,5 @@
 .vscode/
 .cache/
 build*/
+sandboxes/
 compile_commands.json

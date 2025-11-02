@@ -55,6 +55,9 @@ public:
     void toggleHighlight();
     bool highlight() const;
 
+    void pushCanvasState();
+    void popCanvasState();
+
     static constexpr int kMinRadius { 1 };
     static constexpr int kMaxRadius { 25 };
     // Scales the rate at which the scroll wheel resizes the brush
@@ -76,16 +79,7 @@ private:
     Cell* m_hoveredCell;
 
     // Stores canvas states when edits are made
-    struct CompoundState
-    {
-        CompoundState(ParticleState pState, CellState cState) : particleState(pState), cellState(cState) {}
-
-        ParticleState particleState;
-        CellState cellState;
-    };
-    std::stack<std::vector<CompoundState>> m_canvasStateStack;
-    void pushCanvasState();
-    void popCanvasState();
+    std::stack<ParticleGrid::CanvasState> m_canvasStateStack;
 
     // Outline of the brush
     struct Shape

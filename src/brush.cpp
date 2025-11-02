@@ -96,12 +96,6 @@ void Brush::handleEvent(SDL_Event* event, bool isUiFocused)
         break;
 
     case SDL_EVENT_MOUSE_WHEEL:
-        //if ((SDL_GetModState() & (SDL_KMOD_SHIFT | SDL_KMOD_CTRL)) == (SDL_KMOD_SHIFT | SDL_KMOD_CTRL))
-        //{
-        //    int nextIdx = (static_cast<int>(m_brushType) + static_cast<int>(event->wheel.y) + static_cast<int>(BrushType::COUNT)) 
-        //                    % static_cast<int>(BrushType::COUNT);
-        //    setBrushType(static_cast<BrushType>(nextIdx));
-        //}
         if (SDL_GetModState() & SDL_KMOD_CTRL)
         {
             int nextIdx = (static_cast<int>(m_particleType) + static_cast<int>(event->wheel.y) + static_cast<int>(ParticleType::COUNT)) 
@@ -271,37 +265,15 @@ bool Brush::highlight() const
 
 void Brush::pushCanvasState()
 {
-    std::vector<CompoundState> canvasState;
-    canvasState.reserve(m_canvas->width * m_canvas->height);
-    for (const Cell& cell : m_canvas->m_particles)
-    {
-        //Brush::CompoundState cmpState(cell.particleState(), cell.cellState());
-        //canvasState.push_back(std::move(cmpState));
-        canvasState.emplace_back(cell.particleState(), cell.cellState());
-    }
-    m_canvasStateStack.push(std::move(canvasState));
+    m_canvasStateStack.push(std::move(m_canvas->getCanvasState()));
 }
 void Brush::popCanvasState()
 {
+    using CanvasState = ParticleGrid::CanvasState;
+    using CompoundState = ParticleGrid::CompoundState;
     if (m_canvasStateStack.empty()) return;
-
-    size_t canvasSize = m_canvas->width * m_canvas->height;
-    std::vector<CompoundState>& canvasState = m_canvasStateStack.top();
-    if (canvasState.size() == canvasSize)
-    {
-        int i = 0;
-        for (Cell& cell : m_canvas->m_particles)
-        {
-            CompoundState compoundState = canvasState[i];
-            cell.setParticleState(compoundState.particleState);
-            cell.setCellState(compoundState.cellState);
-            ++i;
-        }
-    }
-    else
-    {
-        std::cerr << __func__ << ": Canvas state size (" << canvasState.size() << ") does not match current canvas size (" << canvasSize << " [" << m_canvas->width << "x" << m_canvas->height << "]); discarding\n";
-    }
+    
+    m_canvas->setCanvasState(m_canvasStateStack.top());
     m_canvasStateStack.pop();
 }
 

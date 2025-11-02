@@ -2,12 +2,18 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 
+#include <cereal/archives/binary.hpp>
+#include <cereal/cereal.hpp>
+
 #include <iostream>
 #include <ctime>
 #include <memory>
+#include <fstream>
+#include <filesystem>
 
 #ifdef EMSCRIPTEN
 #include <emscripten.h>
+#include <emscripten/wasmfs.h>
 #endif
 
 #include "particle_grid.h"
@@ -50,10 +56,28 @@ static bool guiShowTemperature;
 
 static Uint64 freq = SDL_GetPerformanceFrequency();
 
+#ifdef EMSCRIPTEN
+    EM_JS(void, setupPersistentStorage, (), {
+        FS.mkdir('/persistent');
+        FS.mount(IDBFS, {}, '/persistent');
+        FS.syncfs(true, function (err) {
+            if (err) console.error("IDBFS sync (load) error: ", err);
+            else console.log("IDBFS loaded from IndexedDB");
+        });
+    });
+
+#define SYNC_FS() (EM_ASM({ FS.syncfs(false, () => console.log("sync")); }))
+#define LOAD_FS() (EM_ASM({ FS.syncfs(true, () => console.log("load")); }))
+
+#endif
+
 static bool quit { false };
 static void mainloop()
 {
     startTime = SDL_GetPerformanceCounter();
+
+    static bool saveModalOpened { false };
+    static bool openModalOpened { false };
 
     // Handle Events //
     SDL_Event e;
@@ -73,7 +97,11 @@ static void mainloop()
             switch (e.key.key)
             {
             case SDLK_R:
-                grid->clear();
+                brush->pushCanvasState();
+                if (!grid->clear())
+                {
+                    brush->popCanvasState();
+                }
                 break;
 
             case SDLK_H:
@@ -100,6 +128,20 @@ static void mainloop()
                     grid->toggleShowTemp();
                     break;
                 }
+
+            case SDLK_S:
+                if (e.key.mod & SDL_KMOD_CTRL)
+                {
+                    saveModalOpened = true;
+                }
+                break;
+
+            case SDLK_O:
+                if (e.key.mod & SDL_KMOD_CTRL)
+                {
+                    openModalOpened = true;
+                }
+                break;
 
             default:
                 break;
@@ -268,19 +310,163 @@ static void mainloop()
     {
         grid->ambientTemperature = std::min(std::max(grid->ambientTemperature, Util::kAbsZero), Util::kMaxTemp);
     }
+    ImGui::PopItemWidth();
+
     guiShowTemperature = grid->showTemp();
     if (ImGui::Checkbox("Infrared mode", &guiShowTemperature))
     {
         grid->toggleShowTemp();
     }
-    ImGui::PopItemWidth();
     debugWindowWidth = ImGui::GetWindowWidth();
 
-    ImGui::SeparatorText("State");
-    const char* playBtnText = grid->isPaused ? "Play" : "Pause";
-    if (ImGui::Button(playBtnText))
+    // State
+    if (ImGui::CollapsingHeader("State"))
     {
-        grid->isPaused = !grid->isPaused;
+        const char* playBtnText = grid->isPaused ? "Play" : "Pause";
+        if (ImGui::Button(playBtnText))
+        {
+            grid->isPaused = !grid->isPaused;
+        }
+    
+        if (ImGui::Button("Save state"))
+        {
+            grid->savedCanvasStates.push_back(grid->getCanvasState());
+        }
+    
+        if (grid->savedCanvasStates.empty()) ImGui::BeginDisabled();
+        if (ImGui::Button("Load state"))
+        {
+            ImGui::OpenPopup("Select state");
+        }
+        if (grid->savedCanvasStates.empty()) ImGui::EndDisabled();
+    
+        ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(-1.f, 80));
+        if (ImGui::BeginPopup("Select state", ImGuiWindowFlags_AlwaysAutoResize))
+        {
+            int stateToDelete { -1 };
+    
+            for (int i = 0; i < grid->savedCanvasStates.size(); ++i)
+            {
+                if (ImGui::Selectable(std::to_string(i).c_str()))
+                {
+                    grid->setCanvasState(grid->savedCanvasStates.at(i));
+                }
+    
+                if (ImGui::BeginPopupContextItem())
+                {
+                    if (ImGui::Button("Delete"))
+                    {
+                        stateToDelete = i;
+                        ImGui::CloseCurrentPopup();
+                    }
+                    ImGui::EndPopup();
+                }
+            }
+    
+            if (grid->savedCanvasStates.empty())
+            {
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::EndPopup();
+    
+            if (stateToDelete >= 0)
+            {
+                grid->savedCanvasStates.erase(grid->savedCanvasStates.begin() + stateToDelete);
+            }
+        }
+    }
+
+    // Modals
+    if (saveModalOpened) ImGui::OpenPopup("Save sandbox");
+    if (ImGui::BeginPopupModal("Save sandbox", &saveModalOpened, ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        static char buf[256];
+        size_t bufLen = strlen(buf);
+
+        ImGui::Text("Enter sandbox title:");
+        ImGui::SetNextItemWidth(150);
+        ImGui::InputText("##title", buf, sizeof(buf));
+        ImGui::SameLine();
+
+        if (bufLen == 0) ImGui::BeginDisabled();
+        if (ImGui::Button("Save"))
+        {
+            std::filesystem::path path(SANDBOXES_DIR);
+            path = path / buf;
+            path.replace_extension(".snbx");
+
+            std::ofstream o(path);
+            if (o.is_open())
+            {
+                cereal::BinaryOutputArchive oa(o);
+                oa << *grid;
+                o.close();
+
+                #ifdef EMSCRIPTEN
+                SYNC_FS();
+                #endif
+            }
+            else  
+            {
+                std::cerr << __func__ << ": Failed to open file" << std::endl;
+            }
+
+            buf[0] = '\0';
+            saveModalOpened = false;
+            ImGui::CloseCurrentPopup();
+        }
+        if (bufLen == 0) ImGui::EndDisabled();
+
+        ImGui::EndPopup();
+    }
+
+    if (openModalOpened) ImGui::OpenPopup("Open sandbox");
+    ImGui::SetNextWindowSize(ImVec2(175, 150));
+    if (ImGui::BeginPopupModal("Open sandbox", &openModalOpened, ImGuiWindowFlags_NoResize))
+    {
+        
+        ImGui::BeginChild("##selectFile", ImVec2(0, ImGui::GetContentRegionAvail().y - ImGui::GetFrameHeightWithSpacing()), ImGuiChildFlags_Borders);
+
+        static const auto SENTINEL = std::filesystem::directory_entry();
+        static auto selectedEntry = SENTINEL;
+
+        auto dir_iter = std::filesystem::directory_iterator(SANDBOXES_DIR);
+        for (auto& entry : dir_iter)
+        {
+            if (entry.is_regular_file() && entry.path().extension() == ".snbx")
+            {
+                if (ImGui::Selectable(entry.path().filename().string().c_str(), entry == selectedEntry))
+                {
+                    selectedEntry = entry;
+                }
+            }
+        }
+        
+        ImGui::EndChild();
+
+        bool invalidEntry = selectedEntry == SENTINEL;
+        if (invalidEntry) ImGui::BeginDisabled();
+        if (ImGui::Button("Open"))
+        {
+            std::ifstream i(selectedEntry.path());
+            if (i.is_open())
+            {
+                cereal::BinaryInputArchive ia(i);
+                ia >> *grid;
+                i.close();
+            }
+            else  
+            {
+                std::cerr << "Failed to open file '" << selectedEntry.path().string() << "'\n";
+            }
+
+            selectedEntry = SENTINEL;
+            openModalOpened = false;
+            ImGui::CloseCurrentPopup();
+        }
+        if (invalidEntry) ImGui::EndDisabled();
+
+        ImGui::EndPopup();
     }
 
     ImGui::End();
@@ -327,6 +513,20 @@ int main(int argc, char** argv)
     }
     if (missingParticleProperties) return -1;
 
+    // Ensure necessary directories
+    #ifdef EMSCRIPTEN
+    setupPersistentStorage();
+    #endif
+    if (!std::filesystem::exists(SANDBOXES_DIR))
+    {
+        std::filesystem::create_directories(SANDBOXES_DIR);
+
+        #ifdef EMSCRIPTEN
+        SYNC_FS();
+        #endif
+    }
+
+
     SDL_Init(SDL_INIT_VIDEO);
     std::srand(std::time(0));
     
@@ -345,10 +545,11 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    cellScale = displayMode->w / kGridWidth;
+    cellScale = ((float)displayMode->w / kGridWidth) * 0.9;
     screenWidth = cellScale * kGridWidth;
     screenHeight = cellScale * kGridHeight;
 
+    SDL_SetHint(SDL_HINT_EMSCRIPTEN_KEYBOARD_ELEMENT, "#canvas");
     window = SDL_CreateWindow("SandToy", screenWidth, screenHeight, SDL_WINDOW_OPENGL);
     renderer = SDL_CreateRenderer(window, nullptr);
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);

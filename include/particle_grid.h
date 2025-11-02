@@ -5,6 +5,8 @@
 #include <vector>
 #include <cstdlib>
 
+#include <cereal/types/vector.hpp>
+
 #include "particles.h"
 #include "util.h"
 
@@ -18,12 +20,24 @@ class Brush;
 //////////////////////////
 struct CellState
 {
+    CellState(float temperature, float temperatureDelta) : temperature(temperature), temperatureDelta(temperatureDelta) {}
+    CellState() = default;
+
     float temperature;
     float temperatureDelta;
 
     bool operator==(const CellState& other) const
     {
         return (temperature == other.temperature && temperatureDelta == other.temperatureDelta);
+    }
+
+    template<class Archive>
+    void serialize(Archive& ar)
+    {
+        ar(
+            temperature,
+            temperatureDelta
+        );
     }
 };
 struct Cell
@@ -33,7 +47,7 @@ struct Cell
     const int x, y;
     char colorVariation;
     
-    void setParticleState(ParticleState state);
+    bool setParticleState(ParticleState state);
     ParticleState particleState() const;
     void setCellState(CellState state);
     CellState cellState() const;
@@ -44,6 +58,8 @@ struct Cell
     bool isBrushOutline() const;
 
     void markForRedraw();
+
+    std::string serialize();
 
 private:
     ParticleGrid* m_particleGrid;
@@ -69,13 +85,72 @@ struct ParticleGrid
     
     void draw();
     void update();
-    void clear(ParticleType type = ParticleType::Air);
+    bool clear(ParticleType type = ParticleType::Air);
 
     float ambientTemperature { 22.f };
     void toggleShowTemp();
     bool showTemp() const;
     void setTempColorMode(Util::TemperatureColorMode mode);
     Util::TemperatureColorMode tempColorMode() const;
+
+    struct CompoundState
+    {
+        CompoundState(ParticleState pState, CellState cState) : particleState(pState), cellState(cState) {}
+        CompoundState() = default;
+
+        ParticleState particleState;
+        CellState cellState;
+
+        template<class Archive>
+        void serialize(Archive& ar)
+        {
+            ar(
+                particleState,
+                cellState
+            );
+        }
+    };
+    struct CanvasState
+    {
+        CanvasState() = default;
+
+        std::vector<CompoundState> states;
+
+        template<class Archive>
+        void serialize(Archive& ar)
+        {
+            ar(
+                states
+            );
+        }
+    };
+    CanvasState getCanvasState() const;
+    void setCanvasState(const CanvasState& state);
+
+    std::vector<CanvasState> savedCanvasStates;
+
+    template<class Archive>
+    void save(Archive& ar) const
+    {
+        ar (
+            getCanvasState(),
+            savedCanvasStates,
+            ambientTemperature
+        );
+    }
+
+    template<class Archive>
+    void load(Archive& ar)
+    {
+        CanvasState state;
+        ar (
+            state,
+            savedCanvasStates,
+            ambientTemperature
+        );
+
+        setCanvasState(state);
+    }
 
     static void startup();
     static void cleanup();
