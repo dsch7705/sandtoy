@@ -339,6 +339,12 @@ int main(int argc, char** argv)
     }
 
     const SDL_DisplayMode* displayMode = SDL_GetCurrentDisplayMode(*displayIDs);
+    if (!displayMode)
+    {
+        std::cerr << "Failed to query display mode: " << SDL_GetError() << std::endl;
+        return -1;
+    }
+
     cellScale = displayMode->w / kGridWidth;
     screenWidth = cellScale * kGridWidth;
     screenHeight = cellScale * kGridHeight;
