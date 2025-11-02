@@ -80,6 +80,8 @@ struct ParticleGrid
     static void startup();
     static void cleanup();
 
+    bool isPaused { false };
+
 private:
     std::vector<Cell> m_particles;
     std::vector<std::pair<int, int>> m_coords;

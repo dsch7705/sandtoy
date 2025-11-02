@@ -19,12 +19,12 @@
 #include "imgui_impl_sdlrenderer3.h"
 
 // Constants //
-constexpr int kCellScale { 6 };
 constexpr int kGridWidth { 256 };
 constexpr int kGridHeight { 128 };
 
-constexpr int kScreenWidth { kGridWidth * kCellScale };
-constexpr int kScreenHeight { kGridHeight * kCellScale };
+int cellScale;
+int screenWidth;
+int screenHeight;
 
 constexpr int kFrameCap { 240 };
 constexpr double kFrameDuration { kFrameCap ? 1. / kFrameCap : -1 };
@@ -53,7 +53,6 @@ static Uint64 freq = SDL_GetPerformanceFrequency();
 static bool quit { false };
 static void mainloop()
 {
-    startTime = SDL_GetPerformanceCounter();
     startTime = SDL_GetPerformanceCounter();
 
     // Handle Events //
@@ -250,10 +249,10 @@ static void mainloop()
     ImGui::PopItemWidth();
     ImGui::End();
     //////////////////
+    
     // Debug //
-
     static float debugWindowWidth { 100.f };
-    ImGui::SetNextWindowPos(ImVec2(kScreenWidth - debugWindowWidth, 0.f));
+    ImGui::SetNextWindowPos(ImVec2(screenWidth - debugWindowWidth, 0.f));
     ImGui::Begin("Debug", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
 
     ParticleState hoveredCellState = brush->hoveredCell() ? brush->hoveredCell()->particleState() : defaultParticleState(ParticleType::Air, grid->ambientTemperature);
@@ -274,24 +273,16 @@ static void mainloop()
     {
         grid->toggleShowTemp();
     }
-    //if (guiShowTemperature)
-    //{
-    //    if (ImGui::BeginCombo("Temp color mode", Util::kTemperatureColorModeNames[static_cast<int>(grid->tempColorMode())].c_str()))
-    //    {
-    //        for (int i = 0; i < static_cast<int>(Util::TemperatureColorMode::COUNT); ++i)
-    //        {
-    //            if (ImGui::Selectable(Util::kTemperatureColorModeNames[i].c_str()))
-    //            {
-    //                grid->setTempColorMode(static_cast<Util::TemperatureColorMode>(i));
-    //            }
-    //        }
-//
-    //        ImGui::EndCombo();
-    //    }
-    //}
-
     ImGui::PopItemWidth();
     debugWindowWidth = ImGui::GetWindowWidth();
+
+    ImGui::SeparatorText("State");
+    const char* playBtnText = grid->isPaused ? "Play" : "Pause";
+    if (ImGui::Button(playBtnText))
+    {
+        grid->isPaused = !grid->isPaused;
+    }
+
     ImGui::End();
     ///////////
     // Draw //
@@ -339,7 +330,20 @@ int main(int argc, char** argv)
     SDL_Init(SDL_INIT_VIDEO);
     std::srand(std::time(0));
     
-    window = SDL_CreateWindow("SandToy", kScreenWidth, kScreenHeight, SDL_WINDOW_OPENGL);
+    int displayCount;
+    SDL_DisplayID* displayIDs = SDL_GetDisplays(&displayCount);
+    if (displayCount == 0)
+    {
+        std::cerr << "No available displays" << std::endl;
+        return -1;
+    }
+
+    const SDL_DisplayMode* displayMode = SDL_GetCurrentDisplayMode(*displayIDs);
+    cellScale = displayMode->w / kGridWidth;
+    screenWidth = cellScale * kGridWidth;
+    screenHeight = cellScale * kGridHeight;
+
+    window = SDL_CreateWindow("SandToy", screenWidth, screenHeight, SDL_WINDOW_OPENGL);
     renderer = SDL_CreateRenderer(window, nullptr);
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 

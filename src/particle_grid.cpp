@@ -231,13 +231,16 @@ void ParticleGrid::update()
     static std::random_device rd;
     static std::mt19937 g(rd());
     
+    if (isPaused)
+        return;
+
     std::shuffle(m_coords.begin(), m_coords.end(), g);
     for (const std::pair<int, int>& coord : m_coords)
     {
         updateCell(coord.first, coord.second);
     }
     
-    // Ambient temperature
+    // Conductive heat model
     // Phase 1: accumulate deltas
     std::vector<float> accumulatedDelta(m_particles.size(), 0.f);
 
