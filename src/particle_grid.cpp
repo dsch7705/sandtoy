@@ -182,81 +182,9 @@ void ParticleGrid::draw()
     {
         Uint32 cellColor;
         constexpr Uint32 kErrorColor { 0xFF00FFFF };
-        switch (cell->particleState().type)
+        ParticleType type = cell->particleState().type;
+        switch (type)
         {
-        default:
-            cellColor = kErrorColor;
-            break;
-
-        case ParticleType::Air:
-            cellColor = 0x00000000;
-            break;
-        
-        case ParticleType::Stone:
-        {
-            Uint32 choices[] = { 0x4A4A4AFF, 0x505050FF, 0x464646FF, 0x4C4C4CFF, 0x444444FF };
-            cellColor = choices[cell->colorVariation];
-            break;
-        }
-
-        case ParticleType::Gravel:
-        {
-            //Uint32 choices[] = { 0x3A3128FF, 0x615441FF, 0x89785CFF, 0x333333FF, 0x272727FF };
-            Uint32 choices[] = { 0x6A6A6AFF, 0x707070FF, 0x666666FF, 0x5E5E5EFF, 0x747474FF };
-            cellColor = choices[cell->colorVariation];
-            break;
-        }
-
-        case ParticleType::Dirt:
-        {
-            Uint32 choices[] = { 0x5A3A1EFF, 0x684425FF, 0x4E3018FF, 0x6F482BFF, 0x59391FFF };
-            cellColor = choices[cell->colorVariation];
-            break;
-        }
-
-        case ParticleType::Sand:
-        {
-            //Uint32 choices[] = { 0xF6D7B0FF, 0xF2D2A9FF, 0xECCCA2FF, 0xE7C496FF, 0xE1BF92FF };
-            Uint32 choices[] = { 0xE2C290FF, 0xD6B77EFF, 0xF0D8A8FF, 0xCCAA72FF, 0xB8935EFF };
-            cellColor = choices[cell->colorVariation];
-            break;
-        }
-
-        case ParticleType::Rainbow:
-        {
-            Uint32 choices[] = { 0xEF476FFF, 0xFFA600FF, 0x06D6A0FF, 0x118AB2FF, 0x9B5DE5FF };
-            cellColor = choices[cell->colorVariation];
-            break;
-        }
-
-        case ParticleType::Pink:
-        {
-            Uint32 choices[] = { 0xFFC0CBFF, 0xFFB6C1FF, 0xFF69B4FF, 0xFF1493FF, 0xDB7093FF };
-            cellColor = choices[cell->colorVariation];
-            break;
-        }
-
-        case ParticleType::Blue:
-        {
-            Uint32 choices[] = { 0x3A75C4FF, 0x4682B4FF, 0x5B9BD5FF, 0x4F83CCFF, 0x357EC7FF };
-            cellColor = choices[cell->colorVariation];
-            break;
-        }
-
-        case ParticleType::Water:
-        {
-            Uint32 choices[] = { 0x4DA6FF66, 0x4CA4F966, 0x4BA2F566, 0x4CA3FB66, 0x4EA7FD66 };
-            cellColor = choices[cell->colorVariation];
-            break;
-        }
-
-        case ParticleType::Crucible:
-        {
-            Uint32 choices[] = { 0x2A2A2A66, 0x2C2C2C66, 0x2E2E2E66, 0x31313166, 0x35353566 };
-            cellColor = choices[cell->colorVariation];
-            break;
-        }
-
         case ParticleType::Raulium:
         {
             if (sfMexicanFlag == nullptr || sfMexicanFlag->pixels == nullptr)
@@ -271,7 +199,9 @@ void ParticleGrid::draw()
             cellColor = flipped;
             break;
         }
-
+        default:
+            cellColor = kParticleColors.at(type).at(cell->colorVariation);
+            break;
         }
     
         // Blackbody radiation

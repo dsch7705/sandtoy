@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <ctime>
+#include <memory>
 
 #ifdef EMSCRIPTEN
 #include <emscripten.h>
@@ -136,6 +137,27 @@ static void mainloop()
             {
                 brush->setParticleType(static_cast<ParticleType>(i));
             }
+
+            ImDrawList* drawList = ImGui::GetWindowDrawList();
+
+            ImVec2 selectableSize = ImGui::GetItemRectSize();
+            float rectWidth = ImGui::GetFrameHeight() / 2;
+            
+            ImVec2 rectEnd = ImGui::GetItemRectMax();
+            rectEnd.x -= 5;
+            rectEnd.y -= (selectableSize.y - rectWidth) / 2;
+            ImVec2 rectStart(rectEnd.x - rectWidth, rectEnd.y - rectWidth);
+
+            for (int c = 0; c < 4; ++c)
+            {
+                ImVec2 p1(rectStart.x + (rectWidth / 2) * (c % 2), rectStart.y + (rectWidth / 2) * (c > 1));
+                ImVec2 p2(p1.x + rectWidth / 2, p1.y + rectWidth / 2);
+
+                uint32_t col = kParticleColors.at(static_cast<ParticleType>(i)).at(c);
+                col = (col & 0xFF000000) >> 24 | (col & 0x00FF0000) >> 8 | (col & 0x0000FF00) << 8 | (col & 0x000000FF) << 24;
+                drawList->AddRectFilled(p1, p2, col);
+            }
+            //drawList->AddRectFilled(rectStart, rectEnd, 0xff0000ff);
         }
         ImGui::EndCombo();
     }
@@ -306,7 +328,11 @@ int main(int argc, char** argv)
             std::cerr << "[INIT] ParticleType '" << kParticleTypeNames[i] << "' does not have a ParticleProperties entry in kParticleProperties.\n";
             missingParticleProperties = true;
         }
-
+        if (!kParticleColors.contains(static_cast<ParticleType>(i)))
+        {
+            std::cerr << "[INIT] ParticleType '" << kParticleTypeNames[i] << "' does not have a ParticleColors entry in kParticleColors.\n";
+            missingParticleProperties = true;
+        }
     }
     if (missingParticleProperties) return -1;
 
